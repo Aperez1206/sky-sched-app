@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import Header from '@/components/aeroplan/Header';
 import MetarRibbon from '@/components/aeroplan/MetarRibbon';
 import Timeline from '@/components/aeroplan/Timeline';
@@ -6,7 +6,16 @@ import BookingModal, { BookingInitialData } from '@/components/aeroplan/BookingM
 import PendingModal from '@/components/aeroplan/PendingModal';
 import StatusModal from '@/components/aeroplan/StatusModal';
 import Legend from '@/components/aeroplan/Legend';
-import { AIRCRAFT, SAMPLE_BOOKINGS, Booking, Aircraft } from '@/data/aeroplan';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AIRCRAFT, INSTRUCTORS, ROOMS, SAMPLE_BOOKINGS,
+  Booking, Aircraft, ScheduleColumn,
+  aircraftToColumns, instructorsToColumns, roomsToColumns,
+} from '@/data/aeroplan';
+import { Plane, GraduationCap, DoorOpen, Settings2 } from 'lucide-react';
+
+type TabValue = 'aircraft' | 'instructors' | 'rooms' | 'custom';
 
 const Index = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -16,9 +25,27 @@ const Index = () => {
   const [pendingOpen, setPendingOpen] = useState(false);
   const [statusTail, setStatusTail] = useState<string | null>(null);
   const [bookingInitial, setBookingInitial] = useState<BookingInitialData | null>(null);
+  const [activeTab, setActiveTab] = useState<TabValue>('aircraft');
+  const [customSelection, setCustomSelection] = useState<{ aircraft: string[]; instructors: string[]; rooms: string[] }>({
+    aircraft: [], instructors: [], rooms: [],
+  });
 
   const pendingCount = bookings.filter(b => b.status === 'pending').length;
   const statusAircraft = statusTail ? aircraftList.find(a => a.tailNumber === statusTail) || null : null;
+
+  const columns = useMemo<ScheduleColumn[]>(() => {
+    switch (activeTab) {
+      case 'aircraft': return aircraftToColumns(aircraftList);
+      case 'instructors': return instructorsToColumns(INSTRUCTORS);
+      case 'rooms': return roomsToColumns(ROOMS);
+      case 'custom': {
+        const ac = aircraftToColumns(aircraftList.filter(a => customSelection.aircraft.includes(a.tailNumber)));
+        const ins = instructorsToColumns(INSTRUCTORS.filter(i => customSelection.instructors.includes(i.name)));
+        const rm = roomsToColumns(ROOMS.filter(r => customSelection.rooms.includes(r.name)));
+        return [...ac, ...ins, ...rm];
+      }
+    }
+  }, [activeTab, aircraftList, customSelection]);
 
   const handleConfirmBooking = useCallback((booking: Omit<Booking, 'id'>) => {
     setBookings(prev => [...prev, { ...booking, id: `b${Date.now()}` }]);
@@ -36,8 +63,12 @@ const Index = () => {
     setAircraftList(prev => prev.map(a => a.tailNumber === tail ? { ...a, status, lastAirport: airport } : a));
   }, []);
 
-  const handleDragCreate = useCallback((tail: string, startDate: Date, endDate: Date) => {
-    setBookingInitial({ aircraftTail: tail, startDate, endDate });
+  const handleDragCreate = useCallback((columnId: string, columnType: 'aircraft' | 'instructor' | 'room', startDate: Date, endDate: Date) => {
+    setBookingInitial({
+      aircraftTail: columnType === 'aircraft' ? columnId : '',
+      startDate,
+      endDate,
+    });
     setBookingOpen(true);
   }, []);
 
@@ -45,6 +76,24 @@ const Index = () => {
     setBookingOpen(false);
     setBookingInitial(null);
   }, []);
+
+  const toggleCustomItem = useCallback((category: 'aircraft' | 'instructors' | 'rooms', id: string) => {
+    setCustomSelection(prev => {
+      const list = prev[category];
+      return { ...prev, [category]: list.includes(id) ? list.filter(x => x !== id) : [...list, id] };
+    });
+  }, []);
+
+  const toggleAllCategory = useCallback((category: 'aircraft' | 'instructors' | 'rooms', allIds: string[]) => {
+    setCustomSelection(prev => {
+      const allSelected = allIds.every(id => prev[category].includes(id));
+      return { ...prev, [category]: allSelected ? [] : allIds };
+    });
+  }, []);
+
+  const allAircraftIds = aircraftList.map(a => a.tailNumber);
+  const allInstructorIds = INSTRUCTORS.map(i => i.name);
+  const allRoomIds = ROOMS.map(r => r.name);
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
@@ -61,10 +110,62 @@ const Index = () => {
           <div className="px-4 pt-3 pb-2">
             <MetarRibbon />
           </div>
+
+          {/* Tab bar */}
+          <div className="px-4 pb-2">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
+              <TabsList className="h-9">
+                <TabsTrigger value="aircraft" className="gap-1.5 text-xs">
+                  <Plane className="h-3.5 w-3.5" /> Aircraft
+                </TabsTrigger>
+                <TabsTrigger value="instructors" className="gap-1.5 text-xs">
+                  <GraduationCap className="h-3.5 w-3.5" /> Instructors
+                </TabsTrigger>
+                <TabsTrigger value="rooms" className="gap-1.5 text-xs">
+                  <DoorOpen className="h-3.5 w-3.5" /> Rooms
+                </TabsTrigger>
+                <TabsTrigger value="custom" className="gap-1.5 text-xs">
+                  <Settings2 className="h-3.5 w-3.5" /> Custom
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Custom picker */}
+          {activeTab === 'custom' && (
+            <div className="px-4 pb-2 flex flex-wrap gap-4 text-xs border-b border-border">
+              <CustomGroup
+                label="Aircraft"
+                items={aircraftList.map(a => ({ id: a.tailNumber, label: a.tailNumber }))}
+                selected={customSelection.aircraft}
+                onToggle={(id) => toggleCustomItem('aircraft', id)}
+                onToggleAll={() => toggleAllCategory('aircraft', allAircraftIds)}
+                allSelected={allAircraftIds.every(id => customSelection.aircraft.includes(id))}
+              />
+              <CustomGroup
+                label="Instructors"
+                items={INSTRUCTORS.map(i => ({ id: i.name, label: i.name.split(' ')[0] }))}
+                selected={customSelection.instructors}
+                onToggle={(id) => toggleCustomItem('instructors', id)}
+                onToggleAll={() => toggleAllCategory('instructors', allInstructorIds)}
+                allSelected={allInstructorIds.every(id => customSelection.instructors.includes(id))}
+              />
+              <CustomGroup
+                label="Rooms"
+                items={ROOMS.map(r => ({ id: r.name, label: r.name }))}
+                selected={customSelection.rooms}
+                onToggle={(id) => toggleCustomItem('rooms', id)}
+                onToggleAll={() => toggleAllCategory('rooms', allRoomIds)}
+                allSelected={allRoomIds.every(id => customSelection.rooms.includes(id))}
+              />
+            </div>
+          )}
+
           <Timeline
-            aircraft={aircraftList}
+            columns={columns}
             bookings={bookings}
             selectedDate={selectedDate}
+            aircraftList={aircraftList}
             onEditStatus={setStatusTail}
             onDragCreate={handleDragCreate}
           />
@@ -96,5 +197,35 @@ const Index = () => {
     </div>
   );
 };
+
+interface CustomGroupProps {
+  label: string;
+  items: { id: string; label: string }[];
+  selected: string[];
+  onToggle: (id: string) => void;
+  onToggleAll: () => void;
+  allSelected: boolean;
+}
+
+function CustomGroup({ label, items, selected, onToggle, onToggleAll, allSelected }: CustomGroupProps) {
+  return (
+    <div className="flex items-center gap-2 py-1.5">
+      <span className="font-semibold text-muted-foreground mr-1">{label}:</span>
+      <button onClick={onToggleAll} className="text-[10px] text-primary hover:underline cursor-pointer">
+        {allSelected ? 'None' : 'All'}
+      </button>
+      {items.map(item => (
+        <label key={item.id} className="flex items-center gap-1 cursor-pointer">
+          <Checkbox
+            checked={selected.includes(item.id)}
+            onCheckedChange={() => onToggle(item.id)}
+            className="h-3.5 w-3.5"
+          />
+          <span className="text-foreground">{item.label}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
 
 export default Index;

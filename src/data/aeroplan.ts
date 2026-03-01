@@ -10,6 +10,18 @@ export interface Instructor {
   certs: string;
 }
 
+export interface Room {
+  name: string;
+  label: string;
+}
+
+export interface ScheduleColumn {
+  id: string;
+  title: string;
+  subtitle: string;
+  type: 'aircraft' | 'instructor' | 'room';
+}
+
 export interface FlightType {
   id: string;
   label: string;
@@ -29,6 +41,7 @@ export interface Booking {
   route: string;
   status: 'confirmed' | 'pending';
   bookedBy: 'admin' | 'instructor' | 'student';
+  roomName?: string;
 }
 
 export const AIRCRAFT: Aircraft[] = [
@@ -53,6 +66,25 @@ export const INSTRUCTORS: Instructor[] = [
   { name: 'Carlos Romero', certs: 'CFI / CFII / MEI' },
   { name: 'Fabian Murgo', certs: 'CFI / CFII / MEI' },
 ];
+
+export const ROOMS: Room[] = [
+  { name: '204 - Conference', label: 'Conference Room' },
+  { name: '206', label: 'Classroom' },
+  { name: 'Google Meet', label: 'Virtual' },
+  { name: 'MDAD Office', label: 'Office' },
+];
+
+export function aircraftToColumns(aircraft: Aircraft[]): ScheduleColumn[] {
+  return aircraft.map(ac => ({ id: ac.tailNumber, title: ac.tailNumber, subtitle: ac.model, type: 'aircraft' as const }));
+}
+
+export function instructorsToColumns(instructors: Instructor[]): ScheduleColumn[] {
+  return instructors.map(i => ({ id: i.name, title: i.name, subtitle: i.certs, type: 'instructor' as const }));
+}
+
+export function roomsToColumns(rooms: Room[]): ScheduleColumn[] {
+  return rooms.map(r => ({ id: r.name, title: r.name, subtitle: r.label, type: 'room' as const }));
+}
 
 export const FLIGHT_TYPES: FlightType[] = [
   { id: 'private', label: 'Part 141 – Private Pilot', cssVar: '--flight-private', color: '#0ea5e9' },
