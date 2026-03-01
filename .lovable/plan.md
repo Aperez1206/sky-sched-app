@@ -1,60 +1,32 @@
 
 
-# AeroPlan — Flight School Scheduling App for KOPF
+# Plan: Make AeroPlan Functional and Clean
 
-A single-page flight school scheduling prototype for Opa-locka Executive Airport with live weather, a 24-hour visual timeline, booking flow, and authorization system.
+## Changes Required
 
----
+### 1. Remove demo/sample data
+- Clear `SAMPLE_BOOKINGS` array in `src/data/aeroplan.ts` so the schedule starts empty
+- Keep the aircraft fleet, instructors, students, and flight types as reference data (these are real)
 
-## 1. Header Bar
-- **Left:** AeroPlan logo with airport identifier (Opa-locka Executive · KOPF)
-- **Center:** Day navigator with large date display, ‹/› arrows, smart labels (Today/Yesterday/Tomorrow), and a "Today" shortcut button
-- **Right:** Live clock (HH:MM:SS), user card (Adrian Perez — Admin), orange pending badge (visible when pending bookings exist), and a "+ Book Flight" button
+### 2. Remove all emojis
+- **MetarRibbon.tsx** (line 31-34): Replace `💨`, `👁`, `🌡`, `⏱` with lucide icons (Wind, Eye, Thermometer, Gauge)
+- **StatusModal.tsx** (line 15-18): Replace `✈`, `🛬`, `🔧`, `⛽` with text-only labels ("Flying", "Ground", "Maintenance", "Refueling")
+- **Timeline.tsx** (line 122): Replace `⏳` text with "Pending" only
 
-## 2. METAR Weather Ribbon
-- Fetches live METAR data from aviationweather.gov for KOPF
-- Displays flight category badge (VFR/MVFR/IFR/LIFR with color coding), winds, visibility, temp/dewpoint, altimeter, and raw METAR string
-- Auto-refreshes every 5 minutes with manual refresh button and last-updated timestamp
+### 3. Fix METAR data fetching
+The aviationweather.gov API is failing due to CORS restrictions from the preview domain. Fix by:
+- Adding a CORS proxy approach using `allorigins.win` or similar public proxy as a fallback
+- Keeping the direct fetch as primary attempt, falling back to proxy if it fails
 
-## 3. Schedule Timeline Panel
-- **Sticky column headers** for 9 aircraft (tail number, model, status badge, Edit Status button)
-- **Vertical 24-hour timeline** at 72px/hour, scrollable within the viewport (no outer page scroll)
-- Default scroll position at 7:00 AM; faint blue tint for 7AM–7PM operating hours
-- Red "NOW" line for current time on today's date
-- Subtle hour gridlines with sticky hour labels on the left
-- Maintenance aircraft columns get a diagonal hatch overlay
-- Status badges: Flying/Refueling get pulsing dots; Ground shows airport code
+### 4. Replace tooltip with hover detail card
+- In `Timeline.tsx`, replace the small `Tooltip` on booking tiles with a `HoverCard` component that shows a richer detail window with all flight information (flight type, student, instructor, aircraft, route, times, area, status) in a nicely formatted card
 
-## 4. Booking Tiles on Timeline
-- Rounded colored tiles matching flight type (5 types with distinct colors)
-- Solid border = confirmed; dashed border = pending authorization
-- Hover tooltip with full booking details (student, instructor, route, flight type, times)
-
-## 5. Booking Flow (2-Step Modal)
-- **Step 1 — Form:** Flight type (visual button grid), start/end date+time pickers (15-min increments, default +2hr duration), student/renter dropdown, aircraft dropdown (maintenance planes disabled), instructor dropdown, Local/XC toggle, route text input
-- **Step 2 — Confirmation:** Summary card with colored header bar, all details displayed, "Confirm Booking ✓" and Back buttons
-
-## 6. Aircraft Status Management
-- Edit Status modal per aircraft to change between Flying, Ground (with airport code), Maintenance, Refueling
-- Status changes immediately reflected in column headers and timeline overlays
-
-## 7. Authorization System
-- Admin/instructor bookings auto-confirmed; student bookings are pending
-- Pending badge in header opens a modal listing all pending reservations
-- Each pending item shows full details with Authorize (green) and Deny (red) buttons
-- Authorizing converts dashed tile to solid; denying removes it
-
-## 8. Legend Footer
-- Color swatches for all 5 flight types plus a dashed "Pending Authorization" swatch
-- "Scroll ↕↔ for full 24h" hint on the right
-
-## 9. Sample Data
-- ~10 pre-populated bookings across various aircraft, instructors, flight types, and time slots
-- 2 pending student reservations to demonstrate the auth flow on load
-
-## Design System
-- Plus Jakarta Sans font throughout
-- Light mode with slate-100 background, white cards, subtle shadows, 14–18px border radius
-- Fixed viewport layout — only the timeline scrolls
-- Synced horizontal scroll between column headers and timeline body
+### 5. Test end-to-end
+After implementation, use browser tools to:
+- Verify empty schedule loads correctly
+- Create a new booking via the Book Flight modal
+- Confirm it appears on the timeline
+- Test the hover detail card on the booking tile
+- Check METAR ribbon displays data or graceful fallback
+- Verify no emojis remain anywhere
 
