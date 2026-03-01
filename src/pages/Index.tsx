@@ -5,6 +5,7 @@ import Header from '@/components/aeroplan/Header';
 import MetarRibbon from '@/components/aeroplan/MetarRibbon';
 import Timeline from '@/components/aeroplan/Timeline';
 import BookingModal, { BookingInitialData } from '@/components/aeroplan/BookingModal';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import PendingModal from '@/components/aeroplan/PendingModal';
 import StatusModal from '@/components/aeroplan/StatusModal';
 import Legend from '@/components/aeroplan/Legend';
@@ -21,6 +22,7 @@ import { Button } from '@/components/ui/button';
 type TabValue = 'aircraft' | 'instructors' | 'rooms' | 'custom';
 
 const Index = () => {
+  const currentUser = useCurrentUser();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [bookings, setBookings] = useState<Booking[]>(SAMPLE_BOOKINGS);
   const [aircraftList, setAircraftList] = useState<Aircraft[]>(AIRCRAFT);
@@ -203,6 +205,7 @@ const Index = () => {
         aircraft={aircraftList}
         onConfirm={handleConfirmBooking}
         initialData={bookingInitial}
+        userRole={currentUser.role}
       />
       <PendingModal
         open={pendingOpen}
