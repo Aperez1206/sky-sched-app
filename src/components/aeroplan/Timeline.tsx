@@ -45,7 +45,7 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
     if (bodyRef.current) {
       bodyRef.current.scrollTop = 7 * HOUR_HEIGHT;
     }
-  }, []);
+  }, [selectedDate]);
 
   const LEFT_GUTTER = 56;
 
@@ -154,7 +154,7 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
       {/* Scrollable body */}
       <div
         ref={bodyRef}
-        className="flex-1 overflow-auto relative"
+        className="flex-1 overflow-auto"
         style={{ cursor: onDragCreate ? 'crosshair' : undefined }}
         onScroll={handleScroll}
         onMouseDown={handleMouseDown}
@@ -162,116 +162,126 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
       >
-        <div className="relative" style={{ height: 24 * HOUR_HEIGHT, width: LEFT_GUTTER + aircraft.length * COL_WIDTH }}>
-          {/* Hour labels (sticky left) */}
-          {HOURS.map(h => (
-            <div
-              key={h}
-              className="absolute left-0 text-[10px] font-medium text-muted-foreground flex items-start justify-end pr-2 z-10"
-              style={{ top: h * HOUR_HEIGHT, width: LEFT_GUTTER, height: HOUR_HEIGHT, position: 'sticky' }}
-            >
-              <span className="sticky left-0 bg-card pr-1">{format(new Date(2000, 0, 1, h), 'h a')}</span>
+        <div className="flex" style={{ minWidth: LEFT_GUTTER + aircraft.length * COL_WIDTH }}>
+          {/* Hour gutter - sticky left */}
+          <div
+            className="sticky left-0 z-20 bg-card flex-shrink-0"
+            style={{ width: LEFT_GUTTER }}
+          >
+            <div className="relative" style={{ height: 24 * HOUR_HEIGHT }}>
+              {HOURS.map(h => (
+                <div
+                  key={h}
+                  className="absolute text-[10px] font-medium text-muted-foreground flex items-start justify-end pr-2"
+                  style={{ top: h * HOUR_HEIGHT, width: LEFT_GUTTER, height: HOUR_HEIGHT }}
+                >
+                  {format(new Date(2000, 0, 1, h), 'h a')}
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
 
-          {/* Grid lines + operating hours tint */}
-          {HOURS.map(h => (
-            <div
-              key={`grid-${h}`}
-              className={`absolute border-t border-border/50 ${h >= 7 && h < 19 ? 'bg-sky-50/40' : ''}`}
-              style={{ top: h * HOUR_HEIGHT, left: LEFT_GUTTER, right: 0, height: HOUR_HEIGHT }}
-            />
-          ))}
+          {/* Grid area */}
+          <div className="relative flex-shrink-0" style={{ height: 24 * HOUR_HEIGHT, width: aircraft.length * COL_WIDTH }}>
+            {/* Grid lines + operating hours tint */}
+            {HOURS.map(h => (
+              <div
+                key={`grid-${h}`}
+                className={`absolute border-t border-border/50 ${h >= 7 && h < 19 ? 'bg-sky-50/40' : ''}`}
+                style={{ top: h * HOUR_HEIGHT, left: 0, right: 0, height: HOUR_HEIGHT }}
+              />
+            ))}
 
-          {/* Column dividers + maintenance hatch */}
-          {aircraft.map((ac, i) => (
-            <div
-              key={`col-${ac.tailNumber}`}
-              className={`absolute top-0 bottom-0 border-r border-border/30 ${ac.status === 'maintenance' ? 'hatch-pattern' : ''}`}
-              style={{ left: LEFT_GUTTER + i * COL_WIDTH, width: COL_WIDTH }}
-            />
-          ))}
+            {/* Column dividers + maintenance hatch */}
+            {aircraft.map((ac, i) => (
+              <div
+                key={`col-${ac.tailNumber}`}
+                className={`absolute top-0 bottom-0 border-r border-border/30 ${ac.status === 'maintenance' ? 'hatch-pattern' : ''}`}
+                style={{ left: i * COL_WIDTH, width: COL_WIDTH }}
+              />
+            ))}
 
-          {/* NOW line */}
-          {today && nowOffset > 0 && (
-            <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: nowOffset }}>
-              <div className="h-[2px] bg-red-500 relative">
-                <span className="absolute -top-2.5 left-1 text-[9px] font-bold text-red-500 bg-card px-1 rounded">NOW</span>
+            {/* NOW line */}
+            {today && nowOffset > 0 && (
+              <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: nowOffset }}>
+                <div className="h-[2px] bg-red-500 relative">
+                  <span className="absolute -top-2.5 left-1 text-[9px] font-bold text-red-500 bg-card px-1 rounded">NOW</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Drag preview rectangle */}
-          {dragPreview && (
-            <div
-              className="absolute rounded-lg z-30 pointer-events-none border-2 border-dashed"
-              style={{
-                top: dragPreview.top,
-                left: dragPreview.left,
-                width: dragPreview.width,
-                height: dragPreview.height,
-                backgroundColor: FLIGHT_TYPES[0].color + '20',
-                borderColor: FLIGHT_TYPES[0].color + '60',
-              }}
-            >
-              <div className="text-[10px] font-semibold px-2 py-1" style={{ color: FLIGHT_TYPES[0].color }}>
-                New Booking
+            {/* Drag preview rectangle */}
+            {dragPreview && (
+              <div
+                className="absolute rounded-lg z-30 pointer-events-none border-2 border-dashed"
+                style={{
+                  top: dragPreview.top,
+                  left: dragPreview.left - LEFT_GUTTER,
+                  width: dragPreview.width,
+                  height: dragPreview.height,
+                  backgroundColor: FLIGHT_TYPES[0].color + '20',
+                  borderColor: FLIGHT_TYPES[0].color + '60',
+                }}
+              >
+                <div className="text-[10px] font-semibold px-2 py-1" style={{ color: FLIGHT_TYPES[0].color }}>
+                  New Booking
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Booking tiles */}
-          {dayBookings.map(booking => {
-            const acIndex = aircraft.findIndex(a => a.tailNumber === booking.aircraftTail);
-            if (acIndex === -1) return null;
-            const ft = getFlightType(booking.flightTypeId);
-            const startH = booking.startDate.getHours() + booking.startDate.getMinutes() / 60;
-            const endH = booking.endDate.getHours() + booking.endDate.getMinutes() / 60;
-            const top = startH * HOUR_HEIGHT;
-            const height = (endH - startH) * HOUR_HEIGHT;
-            const left = LEFT_GUTTER + acIndex * COL_WIDTH + 4;
-            const isPending = booking.status === 'pending';
+            {/* Booking tiles */}
+            {dayBookings.map(booking => {
+              const acIndex = aircraft.findIndex(a => a.tailNumber === booking.aircraftTail);
+              if (acIndex === -1) return null;
+              const ft = getFlightType(booking.flightTypeId);
+              const startH = booking.startDate.getHours() + booking.startDate.getMinutes() / 60;
+              const endH = booking.endDate.getHours() + booking.endDate.getMinutes() / 60;
+              const top = startH * HOUR_HEIGHT;
+              const height = (endH - startH) * HOUR_HEIGHT;
+              const left = acIndex * COL_WIDTH + 4;
+              const isPending = booking.status === 'pending';
 
-            return (
-              <HoverCard key={booking.id} openDelay={100} closeDelay={50}>
-                <HoverCardTrigger asChild>
-                  <div
-                    className="absolute rounded-lg px-2 py-1 cursor-pointer transition-shadow hover:shadow-md overflow-hidden z-10"
-                    style={{
-                      top, left, width: COL_WIDTH - 8, height: Math.max(height, 24),
-                      backgroundColor: ft.color + '18',
-                      border: `2px ${isPending ? 'dashed' : 'solid'} ${ft.color}`,
-                      opacity: isPending ? 0.7 : 1,
-                    }}
-                    onMouseDown={e => e.stopPropagation()}
-                  >
-                    <div className="text-[10px] font-bold truncate" style={{ color: ft.color }}>{ft.label}</div>
-                    <div className="text-[9px] text-foreground/70 truncate">{booking.studentName}</div>
-                    <div className="text-[9px] text-muted-foreground truncate">{format(booking.startDate, 'h:mm a')} – {format(booking.endDate, 'h:mm a')}</div>
-                    {isPending && <div className="text-[9px] font-semibold mt-0.5" style={{ color: ft.color }}>Pending</div>}
-                  </div>
-                </HoverCardTrigger>
-                <HoverCardContent side="right" className="w-72 p-0 overflow-hidden">
-                  <div className="h-1.5" style={{ backgroundColor: ft.color }} />
-                  <div className="p-3 space-y-2">
-                    <div className="font-bold text-sm" style={{ color: ft.color }}>{ft.label}</div>
-                    <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                      <span className="text-muted-foreground">Student</span><span className="font-medium">{booking.studentName}</span>
-                      <span className="text-muted-foreground">Instructor</span><span className="font-medium">{booking.instructorName}</span>
-                      <span className="text-muted-foreground">Aircraft</span><span className="font-medium">{booking.aircraftTail}</span>
-                      <span className="text-muted-foreground">Route</span><span className="font-medium">{booking.route || '—'}</span>
-                      <span className="text-muted-foreground">Time</span><span className="font-medium">{format(booking.startDate, 'h:mm a')} – {format(booking.endDate, 'h:mm a')}</span>
-                      <span className="text-muted-foreground">Area</span><span className="font-medium">{booking.flightArea === 'xc' ? 'Cross Country' : 'Local'}</span>
-                      <span className="text-muted-foreground">Status</span>
-                      <span className={`font-semibold ${booking.status === 'pending' ? 'text-orange-600' : 'text-emerald-600'}`}>
-                        {booking.status === 'pending' ? 'Pending Authorization' : 'Confirmed'}
-                      </span>
+              return (
+                <HoverCard key={booking.id} openDelay={100} closeDelay={50}>
+                  <HoverCardTrigger asChild>
+                    <div
+                      className="absolute rounded-lg px-2 py-1 cursor-pointer transition-shadow hover:shadow-md overflow-hidden z-10"
+                      style={{
+                        top, left, width: COL_WIDTH - 8, height: Math.max(height, 24),
+                        backgroundColor: ft.color + '18',
+                        border: `2px ${isPending ? 'dashed' : 'solid'} ${ft.color}`,
+                        opacity: isPending ? 0.7 : 1,
+                      }}
+                      onMouseDown={e => e.stopPropagation()}
+                    >
+                      <div className="text-[10px] font-bold truncate" style={{ color: ft.color }}>{ft.label}</div>
+                      <div className="text-[9px] text-foreground/70 truncate">{booking.studentName}</div>
+                      <div className="text-[9px] text-muted-foreground truncate">{format(booking.startDate, 'h:mm a')} – {format(booking.endDate, 'h:mm a')}</div>
+                      {isPending && <div className="text-[9px] font-semibold mt-0.5" style={{ color: ft.color }}>Pending</div>}
                     </div>
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
-            );
-          })}
+                  </HoverCardTrigger>
+                  <HoverCardContent side="right" className="w-72 p-0 overflow-hidden">
+                    <div className="h-1.5" style={{ backgroundColor: ft.color }} />
+                    <div className="p-3 space-y-2">
+                      <div className="font-bold text-sm" style={{ color: ft.color }}>{ft.label}</div>
+                      <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                        <span className="text-muted-foreground">Student</span><span className="font-medium">{booking.studentName}</span>
+                        <span className="text-muted-foreground">Instructor</span><span className="font-medium">{booking.instructorName}</span>
+                        <span className="text-muted-foreground">Aircraft</span><span className="font-medium">{booking.aircraftTail}</span>
+                        <span className="text-muted-foreground">Route</span><span className="font-medium">{booking.route || '—'}</span>
+                        <span className="text-muted-foreground">Time</span><span className="font-medium">{format(booking.startDate, 'h:mm a')} – {format(booking.endDate, 'h:mm a')}</span>
+                        <span className="text-muted-foreground">Area</span><span className="font-medium">{booking.flightArea === 'xc' ? 'Cross Country' : 'Local'}</span>
+                        <span className="text-muted-foreground">Status</span>
+                        <span className={`font-semibold ${booking.status === 'pending' ? 'text-orange-600' : 'text-emerald-600'}`}>
+                          {booking.status === 'pending' ? 'Pending Authorization' : 'Confirmed'}
+                        </span>
+                      </div>
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
