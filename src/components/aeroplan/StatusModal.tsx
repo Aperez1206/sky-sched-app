@@ -12,10 +12,10 @@ interface StatusModalProps {
 }
 
 const STATUSES: { value: Aircraft['status']; label: string }[] = [
-  { value: 'flying', label: '✈ Flying' },
-  { value: 'ground', label: '🛬 Ground' },
-  { value: 'maintenance', label: '🔧 Maintenance' },
-  { value: 'refueling', label: '⛽ Refueling' },
+  { value: 'flying', label: 'Flying' },
+  { value: 'ground', label: 'Ground' },
+  { value: 'maintenance', label: 'Maintenance' },
+  { value: 'refueling', label: 'Refueling' },
 ];
 
 export default function StatusModal({ open, onClose, aircraft, onSave }: StatusModalProps) {
