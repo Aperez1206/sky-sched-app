@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { isToday, format, isSameDay } from 'date-fns';
 import { Aircraft, Booking, FLIGHT_TYPES, HOUR_HEIGHT, COL_WIDTH, HOURS, getFlightType } from '@/data/aeroplan';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ interface TimelineProps {
   bookings: Booking[];
   selectedDate: Date;
   onEditStatus: (tail: string) => void;
+  onDragCreate?: (tail: string, startDate: Date, endDate: Date) => void;
 }
 
 const STATUS_STYLES: Record<string, { bg: string; dot: string; pulse: boolean }> = {
@@ -18,9 +19,19 @@ const STATUS_STYLES: Record<string, { bg: string; dot: string; pulse: boolean }>
   refueling: { bg: 'bg-violet-100 text-violet-700', dot: 'bg-violet-500', pulse: true },
 };
 
-export default function Timeline({ aircraft, bookings, selectedDate, onEditStatus }: TimelineProps) {
+interface DragState {
+  dragging: boolean;
+  colIndex: number;
+  startTime: number; // hours as decimal
+  currentTime: number;
+}
+
+const snapTo15 = (hours: number) => Math.round(hours * 4) / 4;
+
+export default function Timeline({ aircraft, bookings, selectedDate, onEditStatus, onDragCreate }: TimelineProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
 
   // Sync horizontal scroll
   const handleScroll = useCallback(() => {
@@ -36,12 +47,87 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
     }
   }, []);
 
+  const LEFT_GUTTER = 56;
+
+  const getTimeFromY = useCallback((clientY: number): number => {
+    if (!bodyRef.current) return 0;
+    const rect = bodyRef.current.getBoundingClientRect();
+    const scrollTop = bodyRef.current.scrollTop;
+    const y = clientY - rect.top + scrollTop;
+    return snapTo15(Math.max(0, Math.min(24, y / HOUR_HEIGHT)));
+  }, []);
+
+  const getColFromX = useCallback((clientX: number): number => {
+    if (!bodyRef.current) return -1;
+    const rect = bodyRef.current.getBoundingClientRect();
+    const scrollLeft = bodyRef.current.scrollLeft;
+    const x = clientX - rect.left + scrollLeft - LEFT_GUTTER;
+    if (x < 0) return -1;
+    const col = Math.floor(x / COL_WIDTH);
+    return col >= 0 && col < aircraft.length ? col : -1;
+  }, [aircraft.length]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!onDragCreate) return;
+    const col = getColFromX(e.clientX);
+    if (col < 0) return;
+    const time = getTimeFromY(e.clientY);
+    setDrag({ dragging: true, colIndex: col, startTime: time, currentTime: time });
+  }, [getColFromX, getTimeFromY, onDragCreate]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!drag?.dragging) return;
+    const time = getTimeFromY(e.clientY);
+    setDrag(prev => prev ? { ...prev, currentTime: time } : null);
+  }, [drag?.dragging, getTimeFromY]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!drag?.dragging || !onDragCreate) { setDrag(null); return; }
+    const ac = aircraft[drag.colIndex];
+    if (!ac) { setDrag(null); return; }
+
+    let t1 = drag.startTime;
+    let t2 = drag.currentTime;
+    if (t1 > t2) [t1, t2] = [t2, t1];
+    // Minimum 1 hour
+    if (t2 - t1 < 0.25) t2 = Math.min(24, t1 + 1);
+
+    const startDate = new Date(selectedDate);
+    startDate.setHours(Math.floor(t1), (t1 % 1) * 60, 0, 0);
+    const endDate = new Date(selectedDate);
+    endDate.setHours(Math.floor(t2), (t2 % 1) * 60, 0, 0);
+
+    setDrag(null);
+    onDragCreate(ac.tailNumber, startDate, endDate);
+  }, [drag, onDragCreate, aircraft, selectedDate]);
+
+  const handleMouseLeave = useCallback(() => {
+    setDrag(null);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrag(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const today = isToday(selectedDate);
   const now = new Date();
   const nowOffset = today ? (now.getHours() + now.getMinutes() / 60) * HOUR_HEIGHT : -1;
 
   const dayBookings = bookings.filter(b => isSameDay(b.startDate, selectedDate));
-  const LEFT_GUTTER = 56;
+
+  // Drag preview rect
+  const dragPreview = drag?.dragging ? (() => {
+    const t1 = Math.min(drag.startTime, drag.currentTime);
+    const t2 = Math.max(drag.startTime, drag.currentTime);
+    const top = t1 * HOUR_HEIGHT;
+    const height = Math.max((t2 - t1) * HOUR_HEIGHT, HOUR_HEIGHT * 0.25);
+    const left = LEFT_GUTTER + drag.colIndex * COL_WIDTH + 4;
+    return { top, height, left, width: COL_WIDTH - 8 };
+  })() : null;
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -66,7 +152,16 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
       </div>
 
       {/* Scrollable body */}
-      <div ref={bodyRef} className="flex-1 overflow-auto relative" onScroll={handleScroll}>
+      <div
+        ref={bodyRef}
+        className="flex-1 overflow-auto relative"
+        style={{ cursor: onDragCreate ? 'crosshair' : undefined }}
+        onScroll={handleScroll}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+      >
         <div className="relative" style={{ height: 24 * HOUR_HEIGHT, width: LEFT_GUTTER + aircraft.length * COL_WIDTH }}>
           {/* Hour labels (sticky left) */}
           {HOURS.map(h => (
@@ -106,6 +201,25 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
             </div>
           )}
 
+          {/* Drag preview rectangle */}
+          {dragPreview && (
+            <div
+              className="absolute rounded-lg z-30 pointer-events-none border-2 border-dashed"
+              style={{
+                top: dragPreview.top,
+                left: dragPreview.left,
+                width: dragPreview.width,
+                height: dragPreview.height,
+                backgroundColor: FLIGHT_TYPES[0].color + '20',
+                borderColor: FLIGHT_TYPES[0].color + '60',
+              }}
+            >
+              <div className="text-[10px] font-semibold px-2 py-1" style={{ color: FLIGHT_TYPES[0].color }}>
+                New Booking
+              </div>
+            </div>
+          )}
+
           {/* Booking tiles */}
           {dayBookings.map(booking => {
             const acIndex = aircraft.findIndex(a => a.tailNumber === booking.aircraftTail);
@@ -129,6 +243,7 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
                       border: `2px ${isPending ? 'dashed' : 'solid'} ${ft.color}`,
                       opacity: isPending ? 0.7 : 1,
                     }}
+                    onMouseDown={e => e.stopPropagation()}
                   >
                     <div className="text-[10px] font-bold truncate" style={{ color: ft.color }}>{ft.label}</div>
                     <div className="text-[9px] text-foreground/70 truncate">{booking.studentName}</div>
