@@ -29,10 +29,10 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarContent className="flex flex-col justify-center h-full">
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu className="flex flex-col gap-6">
+      <SidebarContent className="flex flex-col h-full">
+        <SidebarGroup className="flex-1 flex flex-col">
+          <SidebarGroupContent className="flex-1 flex flex-col">
+            <SidebarMenu className="flex flex-col justify-evenly h-full">
               {NAV_ITEMS.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
