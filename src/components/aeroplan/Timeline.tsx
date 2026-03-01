@@ -189,7 +189,7 @@ export default function Timeline({ columns, bookings, selectedDate, aircraftList
             {columns.map((col, i) => {
               const ac = col.type === 'aircraft' && aircraftList ? aircraftList.find(a => a.tailNumber === col.id) : null;
               return (
-                <div key={`col-${col.id}`} className={`absolute top-0 bottom-0 border-r border-border/30 ${ac?.status === 'maintenance' ? 'hatch-pattern' : ''}`} style={{ left: i * COL_WIDTH, width: COL_WIDTH }} />
+                <div key={`col-${col.id}`} className="absolute top-0 bottom-0 border-r border-border/30" style={{ left: i * COL_WIDTH, width: COL_WIDTH }} />
               );
             })}
 
@@ -227,8 +227,12 @@ export default function Timeline({ columns, bookings, selectedDate, aircraftList
                         style={{ top, left, width: COL_WIDTH - 8, height: Math.max(height, 24), backgroundColor: ft.color + '18', border: `2px ${isPending ? 'dashed' : 'solid'} ${ft.color}`, opacity: isPending ? 0.7 : 1 }}
                         onMouseDown={e => e.stopPropagation()}
                       >
-                        <div className="text-[10px] font-bold truncate" style={{ color: ft.color }}>{ft.label}</div>
-                        <div className="text-[9px] text-foreground/70 truncate">{booking.studentName}</div>
+                        <div className="text-[10px] font-bold truncate" style={{ color: ft.color }}>
+                          {booking.type === 'maintenance' ? 'Maintenance' : ft.label}
+                        </div>
+                        <div className="text-[9px] text-foreground/70 truncate">
+                          {booking.type === 'maintenance' ? (booking.notes || 'Scheduled maintenance') : booking.studentName}
+                        </div>
                         <div className="text-[9px] text-muted-foreground truncate">{format(booking.startDate, 'h:mm a')} – {format(booking.endDate, 'h:mm a')}</div>
                         {isPending && <div className="text-[9px] font-semibold mt-0.5" style={{ color: ft.color }}>Pending</div>}
                       </div>

@@ -29,8 +29,11 @@ export interface FlightType {
   color: string;
 }
 
+export type UserRole = 'admin' | 'instructor' | 'student' | 'dispatch';
+
 export interface Booking {
   id: string;
+  type?: 'flight' | 'maintenance';
   flightTypeId: string;
   aircraftTail: string;
   instructorName: string;
@@ -42,6 +45,7 @@ export interface Booking {
   status: 'confirmed' | 'pending';
   bookedBy: 'admin' | 'instructor' | 'student';
   roomName?: string;
+  notes?: string;
 }
 
 export const AIRCRAFT: Aircraft[] = [
@@ -92,6 +96,7 @@ export const FLIGHT_TYPES: FlightType[] = [
   { id: 'part61', label: 'Part 61 Instruction', cssVar: '--flight-part61', color: '#f97316' },
   { id: 'solo', label: 'Solo', cssVar: '--flight-solo', color: '#10b981' },
   { id: 'rental', label: 'Time Building / Rental', cssVar: '--flight-rental', color: '#f59e0b' },
+  { id: 'maintenance', label: 'Maintenance', cssVar: '--flight-maintenance', color: '#d97706' },
 ];
 
 export const STUDENTS = [
