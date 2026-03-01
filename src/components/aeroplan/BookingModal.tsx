@@ -10,17 +10,24 @@ import { CalendarIcon, Check, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Aircraft, Booking, FLIGHT_TYPES, INSTRUCTORS, STUDENTS, getFlightType } from '@/data/aeroplan';
 
+export interface BookingInitialData {
+  aircraftTail: string;
+  startDate: Date;
+  endDate: Date;
+}
+
 interface BookingModalProps {
   open: boolean;
   onClose: () => void;
   aircraft: Aircraft[];
   onConfirm: (booking: Omit<Booking, 'id'>) => void;
+  initialData?: BookingInitialData | null;
 }
 
 const MINUTES = ['00', '15', '30', '45'];
 const HOURS_LIST = Array.from({ length: 24 }, (_, i) => i);
 
-export default function BookingModal({ open, onClose, aircraft, onConfirm }: BookingModalProps) {
+export default function BookingModal({ open, onClose, aircraft, onConfirm, initialData }: BookingModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [flightTypeId, setFlightTypeId] = useState('');
   const [startDate, setStartDate] = useState<Date>(new Date());
@@ -34,6 +41,19 @@ export default function BookingModal({ open, onClose, aircraft, onConfirm }: Boo
   const [instructor, setInstructor] = useState('');
   const [flightArea, setFlightArea] = useState<'local' | 'xc'>('local');
   const [route, setRoute] = useState('');
+  const [didApplyInitial, setDidApplyInitial] = useState(false);
+
+  // Apply initial data from drag-to-create
+  if (open && initialData && !didApplyInitial) {
+    setAircraftTail(initialData.aircraftTail);
+    setStartDate(initialData.startDate);
+    setStartHour(String(initialData.startDate.getHours()));
+    setStartMin(String(initialData.startDate.getMinutes()).padStart(2, '0'));
+    setEndDate(initialData.endDate);
+    setEndHour(String(initialData.endDate.getHours()));
+    setEndMin(String(initialData.endDate.getMinutes()).padStart(2, '0'));
+    setDidApplyInitial(true);
+  }
 
   const reset = () => {
     setStep(1);
@@ -47,6 +67,7 @@ export default function BookingModal({ open, onClose, aircraft, onConfirm }: Boo
     setInstructor('');
     setFlightArea('local');
     setRoute('');
+    setDidApplyInitial(false);
   };
 
   const handleClose = () => { reset(); onClose(); };

@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import Header from '@/components/aeroplan/Header';
 import MetarRibbon from '@/components/aeroplan/MetarRibbon';
 import Timeline from '@/components/aeroplan/Timeline';
-import BookingModal from '@/components/aeroplan/BookingModal';
+import BookingModal, { BookingInitialData } from '@/components/aeroplan/BookingModal';
 import PendingModal from '@/components/aeroplan/PendingModal';
 import StatusModal from '@/components/aeroplan/StatusModal';
 import Legend from '@/components/aeroplan/Legend';
@@ -15,6 +15,7 @@ const Index = () => {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [pendingOpen, setPendingOpen] = useState(false);
   const [statusTail, setStatusTail] = useState<string | null>(null);
+  const [bookingInitial, setBookingInitial] = useState<BookingInitialData | null>(null);
 
   const pendingCount = bookings.filter(b => b.status === 'pending').length;
   const statusAircraft = statusTail ? aircraftList.find(a => a.tailNumber === statusTail) || null : null;
@@ -33,6 +34,16 @@ const Index = () => {
 
   const handleStatusSave = useCallback((tail: string, status: Aircraft['status'], airport: string) => {
     setAircraftList(prev => prev.map(a => a.tailNumber === tail ? { ...a, status, lastAirport: airport } : a));
+  }, []);
+
+  const handleDragCreate = useCallback((tail: string, startDate: Date, endDate: Date) => {
+    setBookingInitial({ aircraftTail: tail, startDate, endDate });
+    setBookingOpen(true);
+  }, []);
+
+  const handleBookingClose = useCallback(() => {
+    setBookingOpen(false);
+    setBookingInitial(null);
   }, []);
 
   return (
@@ -55,6 +66,7 @@ const Index = () => {
             bookings={bookings}
             selectedDate={selectedDate}
             onEditStatus={setStatusTail}
+            onDragCreate={handleDragCreate}
           />
         </div>
       </div>
@@ -63,9 +75,10 @@ const Index = () => {
 
       <BookingModal
         open={bookingOpen}
-        onClose={() => setBookingOpen(false)}
+        onClose={handleBookingClose}
         aircraft={aircraftList}
         onConfirm={handleConfirmBooking}
+        initialData={bookingInitial}
       />
       <PendingModal
         open={pendingOpen}
