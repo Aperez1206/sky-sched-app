@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useMetar } from '@/hooks/useMetar';
 import { RefreshCw, Cloud, Wind, Eye, Thermometer, Gauge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,8 +12,28 @@ const CAT_STYLES: Record<string, string> = {
   LIFR: 'bg-purple-100 text-purple-800 border-purple-300',
 };
 
+function useMetarAge(lastUpdated: Date | undefined) {
+  const [age, setAge] = useState('');
+  const [isStale, setIsStale] = useState(false);
+
+  useEffect(() => {
+    if (!lastUpdated) return;
+    const update = () => {
+      const mins = Math.floor((Date.now() - lastUpdated.getTime()) / 60000);
+      setAge(mins < 1 ? 'just now' : `${mins} min ago`);
+      setIsStale(mins >= 60);
+    };
+    update();
+    const id = setInterval(update, 30000);
+    return () => clearInterval(id);
+  }, [lastUpdated]);
+
+  return { age, isStale };
+}
+
 export default function MetarRibbon() {
   const { data, loading, refresh } = useMetar();
+  const { age, isStale } = useMetarAge(data?.lastUpdated);
 
   if (!data) return null;
 
@@ -37,6 +58,9 @@ export default function MetarRibbon() {
       <div className="ml-auto flex items-center gap-3">
         <span className="font-mono text-[10px] text-muted-foreground max-w-[300px] truncate" title={data.raw}>
           {data.raw}
+        </span>
+        <span className={`text-[10px] font-medium ${isStale ? 'text-amber-600' : 'text-emerald-600'}`}>
+          {age}
         </span>
         <span className="text-[10px] text-muted-foreground">
           {format(data.lastUpdated, 'HH:mm')}
