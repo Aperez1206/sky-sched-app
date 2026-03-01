@@ -113,18 +113,18 @@ const Index = () => {
 
           {/* Tab bar */}
           <div className="px-4 pb-2">
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
-              <TabsList className="h-9">
-                <TabsTrigger value="aircraft" className="gap-1.5 text-xs">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="w-full">
+              <TabsList className="h-9 w-full">
+                <TabsTrigger value="aircraft" className="flex-1 gap-1.5 text-xs">
                   <Plane className="h-3.5 w-3.5" /> Aircraft
                 </TabsTrigger>
-                <TabsTrigger value="instructors" className="gap-1.5 text-xs">
+                <TabsTrigger value="instructors" className="flex-1 gap-1.5 text-xs">
                   <GraduationCap className="h-3.5 w-3.5" /> Instructors
                 </TabsTrigger>
-                <TabsTrigger value="rooms" className="gap-1.5 text-xs">
+                <TabsTrigger value="rooms" className="flex-1 gap-1.5 text-xs">
                   <DoorOpen className="h-3.5 w-3.5" /> Rooms
                 </TabsTrigger>
-                <TabsTrigger value="custom" className="gap-1.5 text-xs">
+                <TabsTrigger value="custom" className="flex-1 gap-1.5 text-xs">
                   <Settings2 className="h-3.5 w-3.5" /> Custom
                 </TabsTrigger>
               </TabsList>
