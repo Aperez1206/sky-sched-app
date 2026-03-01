@@ -2,7 +2,7 @@ import { useRef, useEffect, useCallback } from 'react';
 import { isToday, format, isSameDay } from 'date-fns';
 import { Aircraft, Booking, FLIGHT_TYPES, HOUR_HEIGHT, COL_WIDTH, HOURS, getFlightType } from '@/data/aeroplan';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 
 interface TimelineProps {
   aircraft: Aircraft[];
@@ -119,8 +119,8 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
             const isPending = booking.status === 'pending';
 
             return (
-              <Tooltip key={booking.id}>
-                <TooltipTrigger asChild>
+              <HoverCard key={booking.id} openDelay={100} closeDelay={50}>
+                <HoverCardTrigger asChild>
                   <div
                     className="absolute rounded-lg px-2 py-1 cursor-pointer transition-shadow hover:shadow-md overflow-hidden z-10"
                     style={{
@@ -133,22 +133,28 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
                     <div className="text-[10px] font-bold truncate" style={{ color: ft.color }}>{ft.label}</div>
                     <div className="text-[9px] text-foreground/70 truncate">{booking.studentName}</div>
                     <div className="text-[9px] text-muted-foreground truncate">{format(booking.startDate, 'h:mm a')} – {format(booking.endDate, 'h:mm a')}</div>
-                    {isPending && <div className="text-[9px] font-semibold mt-0.5" style={{ color: ft.color }}>⏳ Pending</div>}
+                    {isPending && <div className="text-[9px] font-semibold mt-0.5" style={{ color: ft.color }}>Pending</div>}
                   </div>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-[240px]">
-                  <div className="space-y-1 text-xs">
-                    <div className="font-bold" style={{ color: ft.color }}>{ft.label}</div>
-                    <div><strong>Student:</strong> {booking.studentName}</div>
-                    <div><strong>Instructor:</strong> {booking.instructorName}</div>
-                    <div><strong>Aircraft:</strong> {booking.aircraftTail}</div>
-                    <div><strong>Route:</strong> {booking.route}</div>
-                    <div><strong>Time:</strong> {format(booking.startDate, 'h:mm a')} – {format(booking.endDate, 'h:mm a')}</div>
-                    <div><strong>Area:</strong> {booking.flightArea === 'xc' ? 'Cross Country' : 'Local'}</div>
-                    <div><strong>Status:</strong> {booking.status}</div>
+                </HoverCardTrigger>
+                <HoverCardContent side="right" className="w-72 p-0 overflow-hidden">
+                  <div className="h-1.5" style={{ backgroundColor: ft.color }} />
+                  <div className="p-3 space-y-2">
+                    <div className="font-bold text-sm" style={{ color: ft.color }}>{ft.label}</div>
+                    <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                      <span className="text-muted-foreground">Student</span><span className="font-medium">{booking.studentName}</span>
+                      <span className="text-muted-foreground">Instructor</span><span className="font-medium">{booking.instructorName}</span>
+                      <span className="text-muted-foreground">Aircraft</span><span className="font-medium">{booking.aircraftTail}</span>
+                      <span className="text-muted-foreground">Route</span><span className="font-medium">{booking.route || '—'}</span>
+                      <span className="text-muted-foreground">Time</span><span className="font-medium">{format(booking.startDate, 'h:mm a')} – {format(booking.endDate, 'h:mm a')}</span>
+                      <span className="text-muted-foreground">Area</span><span className="font-medium">{booking.flightArea === 'xc' ? 'Cross Country' : 'Local'}</span>
+                      <span className="text-muted-foreground">Status</span>
+                      <span className={`font-semibold ${booking.status === 'pending' ? 'text-orange-600' : 'text-emerald-600'}`}>
+                        {booking.status === 'pending' ? 'Pending Authorization' : 'Confirmed'}
+                      </span>
+                    </div>
                   </div>
-                </TooltipContent>
-              </Tooltip>
+                </HoverCardContent>
+              </HoverCard>
             );
           })}
         </div>

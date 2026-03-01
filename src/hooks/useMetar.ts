@@ -61,11 +61,19 @@ export function useMetar() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
-        'https://aviationweather.gov/api/data/metar?ids=KOPF&format=raw&taf=false'
-      );
-      if (!res.ok) throw new Error('Failed to fetch');
-      const raw = (await res.text()).trim();
+      const directUrl = 'https://aviationweather.gov/api/data/metar?ids=KOPF&format=raw&taf=false';
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`;
+      
+      let raw = '';
+      try {
+        const res = await fetch(directUrl);
+        if (!res.ok) throw new Error('Direct fetch failed');
+        raw = (await res.text()).trim();
+      } catch {
+        const res = await fetch(proxyUrl);
+        if (!res.ok) throw new Error('Proxy fetch failed');
+        raw = (await res.text()).trim();
+      }
       if (!raw) throw new Error('Empty response');
       
       const { temp, dew } = parseTempDew(raw);

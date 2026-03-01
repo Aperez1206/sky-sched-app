@@ -1,5 +1,5 @@
 import { useMetar } from '@/hooks/useMetar';
-import { RefreshCw, Cloud } from 'lucide-react';
+import { RefreshCw, Cloud, Wind, Eye, Thermometer, Gauge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -28,10 +28,10 @@ export default function MetarRibbon() {
       </Badge>
 
       <div className="flex items-center gap-3 text-muted-foreground">
-        <span>💨 {data.wind}</span>
-        <span>👁 {data.visibility}</span>
-        <span>🌡 {data.temperature} / {data.dewpoint}</span>
-        <span>⏱ {data.altimeter}"</span>
+        <span className="flex items-center gap-1"><Wind className="h-3 w-3" /> {data.wind}</span>
+        <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {data.visibility}</span>
+        <span className="flex items-center gap-1"><Thermometer className="h-3 w-3" /> {data.temperature} / {data.dewpoint}</span>
+        <span className="flex items-center gap-1"><Gauge className="h-3 w-3" /> {data.altimeter}"</span>
       </div>
 
       <div className="ml-auto flex items-center gap-3">
