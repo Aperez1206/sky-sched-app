@@ -108,47 +108,46 @@ const Index = () => {
 
       <div className="flex-1 flex flex-col min-h-0 mx-3 mb-1 mt-2">
         <div className="bg-card rounded-xl shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
-          {/* Date nav - full width */}
-          <div className="flex items-center justify-center gap-2 px-4 pt-3 pb-2 border-b border-border">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="text-center min-w-[220px]">
-              {(isToday(selectedDate) ? 'Today' : isYesterday(selectedDate) ? 'Yesterday' : isTomorrow(selectedDate) ? 'Tomorrow' : null) && (
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  {isToday(selectedDate) ? 'Today' : isYesterday(selectedDate) ? 'Yesterday' : 'Tomorrow'}
-                </span>
-              )}
-              <div className="text-lg font-bold text-foreground leading-tight">{format(selectedDate, 'EEEE, MMMM d')}</div>
-            </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            {!isToday(selectedDate) && (
-              <Button variant="outline" size="sm" className="ml-2 text-xs h-7" onClick={() => setSelectedDate(new Date())}>
-                Today
-              </Button>
-            )}
-          </div>
-
           <div className="px-4 pt-2 pb-2">
             <MetarRibbon />
           </div>
 
-          {/* Tab bar */}
-          <div className="px-4 pb-2">
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="w-full">
-              <TabsList className="h-9 w-full">
-                <TabsTrigger value="aircraft" className="flex-1 gap-1.5 text-xs">
+          {/* Date nav + Tab bar in one row */}
+          <div className="flex items-center justify-between gap-4 px-4 pb-2">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="text-center min-w-[180px]">
+                {(isToday(selectedDate) || isYesterday(selectedDate) || isTomorrow(selectedDate)) && (
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                    {isToday(selectedDate) ? 'Today' : isYesterday(selectedDate) ? 'Yesterday' : 'Tomorrow'}
+                  </span>
+                )}
+                <div className="text-sm font-bold text-foreground leading-tight">{format(selectedDate, 'EEEE, MMMM d')}</div>
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              {!isToday(selectedDate) && (
+                <Button variant="outline" size="sm" className="text-[10px] h-6 px-2" onClick={() => setSelectedDate(new Date())}>
+                  Today
+                </Button>
+              )}
+            </div>
+
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="flex-1 max-w-md">
+              <TabsList className="h-8 w-full">
+                <TabsTrigger value="aircraft" className="flex-1 gap-1 text-xs">
                   <Plane className="h-3.5 w-3.5" /> Aircraft
                 </TabsTrigger>
-                <TabsTrigger value="instructors" className="flex-1 gap-1.5 text-xs">
+                <TabsTrigger value="instructors" className="flex-1 gap-1 text-xs">
                   <GraduationCap className="h-3.5 w-3.5" /> Instructors
                 </TabsTrigger>
-                <TabsTrigger value="rooms" className="flex-1 gap-1.5 text-xs">
+                <TabsTrigger value="rooms" className="flex-1 gap-1 text-xs">
                   <DoorOpen className="h-3.5 w-3.5" /> Rooms
                 </TabsTrigger>
-                <TabsTrigger value="custom" className="flex-1 gap-1.5 text-xs">
+                <TabsTrigger value="custom" className="flex-1 gap-1 text-xs">
                   <Settings2 className="h-3.5 w-3.5" /> Custom
                 </TabsTrigger>
               </TabsList>
