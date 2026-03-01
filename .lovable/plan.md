@@ -1,44 +1,46 @@
 
 
-## Maintenance as Time-Bound Reservations + Role Foundation
+## Add Sidebar Navigation with Pages
 
-### What changes
+### Layout
+- Wrap the app in `SidebarProvider` with a collapsible sidebar (collapsed by default using `defaultOpen={false}`)
+- Sidebar trigger button sits in the Header, top-left next to the AeroPlan logo
+- Sidebar uses `collapsible="icon"` so it shrinks to icons when collapsed
 
-**1. New "maintenance" flight type in data model**
+### Sidebar Items
+| Route | Icon | Page |
+|-------|------|------|
+| `/` | CalendarDays | Schedule (current page) |
+| `/people` | Users | People |
+| `/aircraft` | Plane | Aircraft |
+| `/billing` | CreditCard | Billing |
 
-Add a `maintenance` entry to `FLIGHT_TYPES` with a distinct color (amber/orange). Add a `type` field to the `Booking` interface: `'flight' | 'maintenance'`. Maintenance bookings only need `aircraftTail`, `startDate`, `endDate`, and an optional `notes` field -- no student, instructor, flight area, or route required.
+Active route highlighted via `NavLink`.
 
-**2. Remove full-column maintenance hatching from Timeline**
+### New Pages
 
-The current `hatch-pattern` CSS applied to aircraft columns when `status === 'maintenance'` will be removed. Maintenance will show as a normal time-block tile on the timeline, styled with the maintenance color. The aircraft status ("Maintenance" badge in header) can remain for quick reference but no longer blocks the whole column visually.
+**People Page (`/people`)**
+- Three sub-tabs: Staff, Instructors, Students
+- **Staff tab**: Table with demo staff (dispatchers, admin assistants, etc.) showing name, role, email, status
+- **Instructors tab**: Uses existing `INSTRUCTORS` data, shows name, certs, students assigned, status
+- **Students tab**: Table with ~8 demo students showing name, enrolled course, assigned instructor, progress, status
+- Demo data generated in `src/data/people.ts`
 
-**3. Update BookingModal to support maintenance mode**
+**Aircraft Page (`/aircraft`)**
+- Table view of all aircraft from existing `AIRCRAFT` data showing tail number, model, status, last airport
+- Reuses existing data, simple table layout
 
-- Add a toggle/option at the top: "Flight Booking" vs "Maintenance" (admin-only in the future).
-- When "Maintenance" is selected, hide student, instructor, flight area, and route fields. Show only aircraft picker, date/time range, and an optional notes/reason field.
-- The confirmation step adapts to show the simplified maintenance summary.
+**Billing Page (`/billing`)**
+- "Under Construction" placeholder with a construction icon and message
 
-**4. Role system foundation**
-
-- Add a `UserRole` type: `'admin' | 'instructor' | 'student' | 'dispatch'`.
-- Create a simple `useCurrentUser` hook that returns `{ name: 'Chief Administrator', role: 'admin' }` for now (hardcoded, no auth yet).
-- Gate the "Maintenance" booking type behind `role === 'admin'`.
-- The `bookedBy` field on `Booking` already exists; maintenance bookings will be set to `'admin'`.
-
-**5. Legend update**
-
-Add the maintenance color swatch to the Legend component.
-
-### Files to modify
-
-- `src/data/aeroplan.ts` -- add `type` to `Booking`, add maintenance flight type, add `UserRole`
-- `src/components/aeroplan/BookingModal.tsx` -- add maintenance mode toggle, conditional field visibility
-- `src/components/aeroplan/Timeline.tsx` -- remove hatch-pattern logic, render maintenance tiles properly
-- `src/components/aeroplan/Legend.tsx` -- add maintenance to legend
-- `src/hooks/useCurrentUser.ts` -- new file, returns hardcoded admin user
-- `src/pages/Index.tsx` -- wire useCurrentUser, pass role to BookingModal
-
-### Technical details
-
-The `Booking` interface gets a new optional `type` field defaulting to `'flight'`. Maintenance bookings set `type: 'maintenance'`, `flightTypeId: 'maintenance'`, `studentName: ''`, `instructorName: ''`. The timeline tile for maintenance shows "Maintenance" label + optional notes instead of student/instructor info. The hatch-pattern class on the column div is removed entirely -- maintenance is communicated through individual time-block reservations, not column-wide styling.
+### Files to Create/Modify
+- `src/App.tsx` — wrap in `SidebarProvider`, add routes
+- `src/components/AppSidebar.tsx` — sidebar component
+- `src/components/aeroplan/Header.tsx` — add `SidebarTrigger` next to logo
+- `src/pages/Index.tsx` — no major changes, just works within new layout
+- `src/pages/PeoplePage.tsx` — new, with Staff/Instructors/Students tabs
+- `src/pages/AircraftPage.tsx` — new, table of aircraft
+- `src/pages/BillingPage.tsx` — new, under construction placeholder
+- `src/data/people.ts` — demo students, staff with course enrollments
+- `src/components/AppLayout.tsx` — layout wrapper with sidebar + header pattern
 
