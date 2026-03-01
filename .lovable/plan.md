@@ -1,32 +1,44 @@
 
 
-# Plan: Make AeroPlan Functional and Clean
+# Drag-to-Create Booking on Timeline
 
-## Changes Required
+## Overview
+Add click-and-drag interaction on empty timeline cells to create a reservation. Clicking or dragging vertically within an aircraft column creates a time selection preview, then opens the BookingModal pre-filled with the selected aircraft, date, start time, and end time.
 
-### 1. Remove demo/sample data
-- Clear `SAMPLE_BOOKINGS` array in `src/data/aeroplan.ts` so the schedule starts empty
-- Keep the aircraft fleet, instructors, students, and flight types as reference data (these are real)
+## How It Works
 
-### 2. Remove all emojis
-- **MetarRibbon.tsx** (line 31-34): Replace `💨`, `👁`, `🌡`, `⏱` with lucide icons (Wind, Eye, Thermometer, Gauge)
-- **StatusModal.tsx** (line 15-18): Replace `✈`, `🛬`, `🔧`, `⛽` with text-only labels ("Flying", "Ground", "Maintenance", "Refueling")
-- **Timeline.tsx** (line 122): Replace `⏳` text with "Pending" only
+1. **Mouse down** on empty timeline area: record the aircraft column (by x-position) and start time (by y-position, snapped to 15-min increments)
+2. **Mouse move** (while held): render a semi-transparent preview rectangle that grows/shrinks as the user drags up or down within the same column
+3. **Mouse up**: finalize the selection. If the drag was minimal (just a click), default to a 1-hour block. Open the BookingModal pre-filled with the aircraft tail, start time, and end time
+4. **Escape / mouse leave**: cancel the drag
 
-### 3. Fix METAR data fetching
-The aviationweather.gov API is failing due to CORS restrictions from the preview domain. Fix by:
-- Adding a CORS proxy approach using `allorigins.win` or similar public proxy as a fallback
-- Keeping the direct fetch as primary attempt, falling back to proxy if it fails
+## Changes
 
-### 4. Replace tooltip with hover detail card
-- In `Timeline.tsx`, replace the small `Tooltip` on booking tiles with a `HoverCard` component that shows a richer detail window with all flight information (flight type, student, instructor, aircraft, route, times, area, status) in a nicely formatted card
+### 1. Timeline.tsx — Add drag state and handlers
+- Add `useState` for drag state: `{ dragging, colIndex, startY, currentY }` 
+- Add `onMouseDown` on the grid area (not on booking tiles — use `stopPropagation` on tiles)
+- Convert mouse Y position to time (accounting for scroll offset), snap to 15-min increments
+- On `mousemove`, update the preview rectangle
+- On `mouseup`, calculate aircraft tail + start/end times, call a new `onDragCreate` callback
+- Render a translucent blue preview rectangle during drag
 
-### 5. Test end-to-end
-After implementation, use browser tools to:
-- Verify empty schedule loads correctly
-- Create a new booking via the Book Flight modal
-- Confirm it appears on the timeline
-- Test the hover detail card on the booking tile
-- Check METAR ribbon displays data or graceful fallback
-- Verify no emojis remain anywhere
+### 2. Timeline.tsx — Update props interface
+- Add `onDragCreate: (tail: string, startDate: Date, endDate: Date) => void` prop
+
+### 3. BookingModal.tsx — Accept pre-filled values
+- Add optional `initialData` prop: `{ aircraftTail, startDate, endDate }`
+- When provided, pre-populate the aircraft, start/end date+time fields on mount
+- Reset when modal closes
+
+### 4. Index.tsx — Wire up drag-to-create
+- Add `handleDragCreate` callback that sets initial data and opens the BookingModal
+- Pass `onDragCreate` to Timeline and `initialData` to BookingModal
+
+## Technical Details
+- Time snapping: `Math.round((mouseY / HOUR_HEIGHT) * 4) / 4` gives 15-min increments
+- Column detection: `Math.floor((mouseX - LEFT_GUTTER) / COL_WIDTH)` gives aircraft index
+- Prevent drag on existing booking tiles via `e.stopPropagation()` on tile `onMouseDown`
+- Minimum block size: 1 hour (if user just clicks without dragging)
+- Preview rectangle uses the first flight type color at 20% opacity as a neutral selection indicator
+- The `cursor: crosshair` style is applied to empty grid areas to hint at drag capability
 
