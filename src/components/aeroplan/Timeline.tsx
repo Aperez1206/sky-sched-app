@@ -1,15 +1,16 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { isToday, format, isSameDay } from 'date-fns';
-import { Aircraft, Booking, FLIGHT_TYPES, HOUR_HEIGHT, COL_WIDTH, HOURS, getFlightType } from '@/data/aeroplan';
+import { ScheduleColumn, Aircraft, Booking, FLIGHT_TYPES, HOUR_HEIGHT, COL_WIDTH, HOURS, getFlightType } from '@/data/aeroplan';
 import { Button } from '@/components/ui/button';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 
 interface TimelineProps {
-  aircraft: Aircraft[];
+  columns: ScheduleColumn[];
   bookings: Booking[];
   selectedDate: Date;
-  onEditStatus: (tail: string) => void;
-  onDragCreate?: (tail: string, startDate: Date, endDate: Date) => void;
+  aircraftList?: Aircraft[];
+  onEditStatus?: (tail: string) => void;
+  onDragCreate?: (columnId: string, columnType: 'aircraft' | 'instructor' | 'room', startDate: Date, endDate: Date) => void;
 }
 
 const STATUS_STYLES: Record<string, { bg: string; dot: string; pulse: boolean }> = {
@@ -22,25 +23,31 @@ const STATUS_STYLES: Record<string, { bg: string; dot: string; pulse: boolean }>
 interface DragState {
   dragging: boolean;
   colIndex: number;
-  startTime: number; // hours as decimal
+  startTime: number;
   currentTime: number;
 }
 
 const snapTo15 = (hours: number) => Math.round(hours * 4) / 4;
 
-export default function Timeline({ aircraft, bookings, selectedDate, onEditStatus, onDragCreate }: TimelineProps) {
+function getBookingsForColumn(col: ScheduleColumn, bookings: Booking[]): Booking[] {
+  switch (col.type) {
+    case 'aircraft': return bookings.filter(b => b.aircraftTail === col.id);
+    case 'instructor': return bookings.filter(b => b.instructorName === col.id);
+    case 'room': return bookings.filter(b => b.roomName === col.id);
+  }
+}
+
+export default function Timeline({ columns, bookings, selectedDate, aircraftList, onEditStatus, onDragCreate }: TimelineProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
 
-  // Sync horizontal scroll
   const handleScroll = useCallback(() => {
     if (bodyRef.current && headerRef.current) {
       headerRef.current.scrollLeft = bodyRef.current.scrollLeft;
     }
   }, []);
 
-  // Default scroll to 7 AM
   useEffect(() => {
     if (bodyRef.current) {
       bodyRef.current.scrollTop = 7 * HOUR_HEIGHT;
@@ -64,8 +71,8 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
     const x = clientX - rect.left + scrollLeft - LEFT_GUTTER;
     if (x < 0) return -1;
     const col = Math.floor(x / COL_WIDTH);
-    return col >= 0 && col < aircraft.length ? col : -1;
-  }, [aircraft.length]);
+    return col >= 0 && col < columns.length ? col : -1;
+  }, [columns.length]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!onDragCreate) return;
@@ -83,13 +90,12 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
 
   const handleMouseUp = useCallback(() => {
     if (!drag?.dragging || !onDragCreate) { setDrag(null); return; }
-    const ac = aircraft[drag.colIndex];
-    if (!ac) { setDrag(null); return; }
+    const col = columns[drag.colIndex];
+    if (!col) { setDrag(null); return; }
 
     let t1 = drag.startTime;
     let t2 = drag.currentTime;
     if (t1 > t2) [t1, t2] = [t2, t1];
-    // Minimum 1 hour
     if (t2 - t1 < 0.25) t2 = Math.min(24, t1 + 1);
 
     const startDate = new Date(selectedDate);
@@ -98,17 +104,13 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
     endDate.setHours(Math.floor(t2), (t2 % 1) * 60, 0, 0);
 
     setDrag(null);
-    onDragCreate(ac.tailNumber, startDate, endDate);
-  }, [drag, onDragCreate, aircraft, selectedDate]);
+    onDragCreate(col.id, col.type, startDate, endDate);
+  }, [drag, onDragCreate, columns, selectedDate]);
 
-  const handleMouseLeave = useCallback(() => {
-    setDrag(null);
-  }, []);
+  const handleMouseLeave = useCallback(() => { setDrag(null); }, []);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDrag(null);
-    };
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setDrag(null); };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
@@ -119,7 +121,6 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
 
   const dayBookings = bookings.filter(b => isSameDay(b.startDate, selectedDate));
 
-  // Drag preview rect
   const dragPreview = drag?.dragging ? (() => {
     const t1 = Math.min(drag.startTime, drag.currentTime);
     const t2 = Math.max(drag.startTime, drag.currentTime);
@@ -133,19 +134,24 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
     <div className="flex flex-col flex-1 min-h-0">
       {/* Sticky column headers */}
       <div ref={headerRef} className="flex overflow-hidden border-b border-border flex-shrink-0" style={{ paddingLeft: LEFT_GUTTER }}>
-        {aircraft.map(ac => {
-          const st = STATUS_STYLES[ac.status];
+        {columns.map(col => {
+          const ac = col.type === 'aircraft' && aircraftList ? aircraftList.find(a => a.tailNumber === col.id) : null;
+          const st = ac ? STATUS_STYLES[ac.status] : null;
           return (
-            <div key={ac.tailNumber} className="flex-shrink-0 border-r border-border px-2 py-2.5 flex flex-col items-center gap-1" style={{ width: COL_WIDTH }}>
-              <span className="text-xs font-bold text-foreground">{ac.tailNumber}</span>
-              <span className="text-[10px] text-muted-foreground">{ac.model}</span>
-              <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${st.bg}`}>
-                <span className={`inline-block h-1.5 w-1.5 rounded-full ${st.dot} ${st.pulse ? 'pulse-dot' : ''}`} />
-                {ac.status === 'ground' ? ac.lastAirport : ac.status.charAt(0).toUpperCase() + ac.status.slice(1)}
-              </div>
-              <Button variant="ghost" size="sm" className="h-5 text-[10px] text-muted-foreground px-1.5 hover:text-foreground" onClick={() => onEditStatus(ac.tailNumber)}>
-                Edit Status
-              </Button>
+            <div key={col.id} className="flex-shrink-0 border-r border-border px-2 py-2.5 flex flex-col items-center gap-1" style={{ width: COL_WIDTH }}>
+              <span className="text-xs font-bold text-foreground truncate max-w-full">{col.title}</span>
+              <span className="text-[10px] text-muted-foreground truncate max-w-full">{col.subtitle}</span>
+              {ac && st && (
+                <>
+                  <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${st.bg}`}>
+                    <span className={`inline-block h-1.5 w-1.5 rounded-full ${st.dot} ${st.pulse ? 'pulse-dot' : ''}`} />
+                    {ac.status === 'ground' ? ac.lastAirport : ac.status.charAt(0).toUpperCase() + ac.status.slice(1)}
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-5 text-[10px] text-muted-foreground px-1.5 hover:text-foreground" onClick={() => onEditStatus?.(ac.tailNumber)}>
+                    Edit Status
+                  </Button>
+                </>
+              )}
             </div>
           );
         })}
@@ -162,19 +168,12 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
       >
-        <div className="flex" style={{ minWidth: LEFT_GUTTER + aircraft.length * COL_WIDTH }}>
+        <div className="flex" style={{ minWidth: LEFT_GUTTER + columns.length * COL_WIDTH }}>
           {/* Hour gutter - sticky left */}
-          <div
-            className="sticky left-0 z-20 bg-card flex-shrink-0"
-            style={{ width: LEFT_GUTTER }}
-          >
+          <div className="sticky left-0 z-20 bg-card flex-shrink-0" style={{ width: LEFT_GUTTER }}>
             <div className="relative" style={{ height: 24 * HOUR_HEIGHT }}>
               {HOURS.map(h => (
-                <div
-                  key={h}
-                  className="absolute text-[10px] font-medium text-muted-foreground flex items-start justify-end pr-2"
-                  style={{ top: h * HOUR_HEIGHT, width: LEFT_GUTTER, height: HOUR_HEIGHT }}
-                >
+                <div key={h} className="absolute text-[10px] font-medium text-muted-foreground flex items-start justify-end pr-2" style={{ top: h * HOUR_HEIGHT, width: LEFT_GUTTER, height: HOUR_HEIGHT }}>
                   {format(new Date(2000, 0, 1, h), 'h a')}
                 </div>
               ))}
@@ -182,26 +181,18 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
           </div>
 
           {/* Grid area */}
-          <div className="relative flex-shrink-0" style={{ height: 24 * HOUR_HEIGHT, width: aircraft.length * COL_WIDTH }}>
-            {/* Grid lines + operating hours tint */}
+          <div className="relative flex-shrink-0" style={{ height: 24 * HOUR_HEIGHT, width: columns.length * COL_WIDTH }}>
             {HOURS.map(h => (
-              <div
-                key={`grid-${h}`}
-                className={`absolute border-t border-border/50 ${h >= 7 && h < 19 ? 'bg-sky-50/40' : ''}`}
-                style={{ top: h * HOUR_HEIGHT, left: 0, right: 0, height: HOUR_HEIGHT }}
-              />
+              <div key={`grid-${h}`} className={`absolute border-t border-border/50 ${h >= 7 && h < 19 ? 'bg-sky-50/40' : ''}`} style={{ top: h * HOUR_HEIGHT, left: 0, right: 0, height: HOUR_HEIGHT }} />
             ))}
 
-            {/* Column dividers + maintenance hatch */}
-            {aircraft.map((ac, i) => (
-              <div
-                key={`col-${ac.tailNumber}`}
-                className={`absolute top-0 bottom-0 border-r border-border/30 ${ac.status === 'maintenance' ? 'hatch-pattern' : ''}`}
-                style={{ left: i * COL_WIDTH, width: COL_WIDTH }}
-              />
-            ))}
+            {columns.map((col, i) => {
+              const ac = col.type === 'aircraft' && aircraftList ? aircraftList.find(a => a.tailNumber === col.id) : null;
+              return (
+                <div key={`col-${col.id}`} className={`absolute top-0 bottom-0 border-r border-border/30 ${ac?.status === 'maintenance' ? 'hatch-pattern' : ''}`} style={{ left: i * COL_WIDTH, width: COL_WIDTH }} />
+              );
+            })}
 
-            {/* NOW line */}
             {today && nowOffset > 0 && (
               <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: nowOffset }}>
                 <div className="h-[2px] bg-red-500 relative">
@@ -210,76 +201,59 @@ export default function Timeline({ aircraft, bookings, selectedDate, onEditStatu
               </div>
             )}
 
-            {/* Drag preview rectangle */}
             {dragPreview && (
-              <div
-                className="absolute rounded-lg z-30 pointer-events-none border-2 border-dashed"
-                style={{
-                  top: dragPreview.top,
-                  left: dragPreview.left - LEFT_GUTTER,
-                  width: dragPreview.width,
-                  height: dragPreview.height,
-                  backgroundColor: FLIGHT_TYPES[0].color + '20',
-                  borderColor: FLIGHT_TYPES[0].color + '60',
-                }}
-              >
-                <div className="text-[10px] font-semibold px-2 py-1" style={{ color: FLIGHT_TYPES[0].color }}>
-                  New Booking
-                </div>
+              <div className="absolute rounded-lg z-30 pointer-events-none border-2 border-dashed" style={{ top: dragPreview.top, left: dragPreview.left - LEFT_GUTTER, width: dragPreview.width, height: dragPreview.height, backgroundColor: FLIGHT_TYPES[0].color + '20', borderColor: FLIGHT_TYPES[0].color + '60' }}>
+                <div className="text-[10px] font-semibold px-2 py-1" style={{ color: FLIGHT_TYPES[0].color }}>New Booking</div>
               </div>
             )}
 
             {/* Booking tiles */}
-            {dayBookings.map(booking => {
-              const acIndex = aircraft.findIndex(a => a.tailNumber === booking.aircraftTail);
-              if (acIndex === -1) return null;
-              const ft = getFlightType(booking.flightTypeId);
-              const startH = booking.startDate.getHours() + booking.startDate.getMinutes() / 60;
-              const endH = booking.endDate.getHours() + booking.endDate.getMinutes() / 60;
-              const top = startH * HOUR_HEIGHT;
-              const height = (endH - startH) * HOUR_HEIGHT;
-              const left = acIndex * COL_WIDTH + 4;
-              const isPending = booking.status === 'pending';
+            {columns.map((col, colIndex) => {
+              const colBookings = getBookingsForColumn(col, dayBookings);
+              return colBookings.map(booking => {
+                const ft = getFlightType(booking.flightTypeId);
+                const startH = booking.startDate.getHours() + booking.startDate.getMinutes() / 60;
+                const endH = booking.endDate.getHours() + booking.endDate.getMinutes() / 60;
+                const top = startH * HOUR_HEIGHT;
+                const height = (endH - startH) * HOUR_HEIGHT;
+                const left = colIndex * COL_WIDTH + 4;
+                const isPending = booking.status === 'pending';
 
-              return (
-                <HoverCard key={booking.id} openDelay={100} closeDelay={50}>
-                  <HoverCardTrigger asChild>
-                    <div
-                      className="absolute rounded-lg px-2 py-1 cursor-pointer transition-shadow hover:shadow-md overflow-hidden z-10"
-                      style={{
-                        top, left, width: COL_WIDTH - 8, height: Math.max(height, 24),
-                        backgroundColor: ft.color + '18',
-                        border: `2px ${isPending ? 'dashed' : 'solid'} ${ft.color}`,
-                        opacity: isPending ? 0.7 : 1,
-                      }}
-                      onMouseDown={e => e.stopPropagation()}
-                    >
-                      <div className="text-[10px] font-bold truncate" style={{ color: ft.color }}>{ft.label}</div>
-                      <div className="text-[9px] text-foreground/70 truncate">{booking.studentName}</div>
-                      <div className="text-[9px] text-muted-foreground truncate">{format(booking.startDate, 'h:mm a')} – {format(booking.endDate, 'h:mm a')}</div>
-                      {isPending && <div className="text-[9px] font-semibold mt-0.5" style={{ color: ft.color }}>Pending</div>}
-                    </div>
-                  </HoverCardTrigger>
-                  <HoverCardContent side="right" className="w-72 p-0 overflow-hidden">
-                    <div className="h-1.5" style={{ backgroundColor: ft.color }} />
-                    <div className="p-3 space-y-2">
-                      <div className="font-bold text-sm" style={{ color: ft.color }}>{ft.label}</div>
-                      <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                        <span className="text-muted-foreground">Student</span><span className="font-medium">{booking.studentName}</span>
-                        <span className="text-muted-foreground">Instructor</span><span className="font-medium">{booking.instructorName}</span>
-                        <span className="text-muted-foreground">Aircraft</span><span className="font-medium">{booking.aircraftTail}</span>
-                        <span className="text-muted-foreground">Route</span><span className="font-medium">{booking.route || '—'}</span>
-                        <span className="text-muted-foreground">Time</span><span className="font-medium">{format(booking.startDate, 'h:mm a')} – {format(booking.endDate, 'h:mm a')}</span>
-                        <span className="text-muted-foreground">Area</span><span className="font-medium">{booking.flightArea === 'xc' ? 'Cross Country' : 'Local'}</span>
-                        <span className="text-muted-foreground">Status</span>
-                        <span className={`font-semibold ${booking.status === 'pending' ? 'text-orange-600' : 'text-emerald-600'}`}>
-                          {booking.status === 'pending' ? 'Pending Authorization' : 'Confirmed'}
-                        </span>
+                return (
+                  <HoverCard key={`${col.id}-${booking.id}`} openDelay={100} closeDelay={50}>
+                    <HoverCardTrigger asChild>
+                      <div
+                        className="absolute rounded-lg px-2 py-1 cursor-pointer transition-shadow hover:shadow-md overflow-hidden z-10"
+                        style={{ top, left, width: COL_WIDTH - 8, height: Math.max(height, 24), backgroundColor: ft.color + '18', border: `2px ${isPending ? 'dashed' : 'solid'} ${ft.color}`, opacity: isPending ? 0.7 : 1 }}
+                        onMouseDown={e => e.stopPropagation()}
+                      >
+                        <div className="text-[10px] font-bold truncate" style={{ color: ft.color }}>{ft.label}</div>
+                        <div className="text-[9px] text-foreground/70 truncate">{booking.studentName}</div>
+                        <div className="text-[9px] text-muted-foreground truncate">{format(booking.startDate, 'h:mm a')} – {format(booking.endDate, 'h:mm a')}</div>
+                        {isPending && <div className="text-[9px] font-semibold mt-0.5" style={{ color: ft.color }}>Pending</div>}
                       </div>
-                    </div>
-                  </HoverCardContent>
-                </HoverCard>
-              );
+                    </HoverCardTrigger>
+                    <HoverCardContent side="right" className="w-72 p-0 overflow-hidden">
+                      <div className="h-1.5" style={{ backgroundColor: ft.color }} />
+                      <div className="p-3 space-y-2">
+                        <div className="font-bold text-sm" style={{ color: ft.color }}>{ft.label}</div>
+                        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                          <span className="text-muted-foreground">Student</span><span className="font-medium">{booking.studentName}</span>
+                          <span className="text-muted-foreground">Instructor</span><span className="font-medium">{booking.instructorName}</span>
+                          <span className="text-muted-foreground">Aircraft</span><span className="font-medium">{booking.aircraftTail}</span>
+                          <span className="text-muted-foreground">Route</span><span className="font-medium">{booking.route || '—'}</span>
+                          <span className="text-muted-foreground">Time</span><span className="font-medium">{format(booking.startDate, 'h:mm a')} – {format(booking.endDate, 'h:mm a')}</span>
+                          <span className="text-muted-foreground">Area</span><span className="font-medium">{booking.flightArea === 'xc' ? 'Cross Country' : 'Local'}</span>
+                          <span className="text-muted-foreground">Status</span>
+                          <span className={`font-semibold ${booking.status === 'pending' ? 'text-orange-600' : 'text-emerald-600'}`}>
+                            {booking.status === 'pending' ? 'Pending Authorization' : 'Confirmed'}
+                          </span>
+                        </div>
+                      </div>
+                    </HoverCardContent>
+                  </HoverCard>
+                );
+              });
             })}
           </div>
         </div>
