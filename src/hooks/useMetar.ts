@@ -14,20 +14,20 @@ export interface MetarData {
 
 // Airports without their own METAR use the nearest reporting station
 const NEAREST_METAR: Record<string, string> = {
-  KAPH: 'KFXE',  // Naples Municipal -> Fort Lauderdale Exec
-  X14: 'KLAL',   // La Belle Municipal -> Lakeland Linder
-  '2IS': 'KMIA', // Islamorada -> Miami Intl
+  KAPF: 'KFXE',
+  X14: 'KOBE',   // La Belle -> nearest reporting: Okeechobee
+  '2IS': 'KOBE', // Airglades -> nearest reporting: Okeechobee
 };
 
 export const AIRPORT_OPTIONS = [
   { id: 'KOPF', label: 'KOPF – Opa-locka Executive' },
-  { id: 'KAPH', label: 'KAPH – A.P. Hill (via KFXE)' },
+  { id: 'KAPF', label: 'KAPF – Naples Municipal (via KFXE)' },
   { id: 'KIMM', label: 'KIMM – Immokalee' },
-  { id: 'KTMB', label: 'KTMB – Kendall-Tamiami' },
-  { id: 'X14', label: 'X14 – La Belle (via KLAL)' },
+  { id: 'KTMB', label: 'KTMB – Miami Executive' },
+  { id: 'X14', label: 'X14 – La Belle (via KOBE)' },
   { id: 'KPHK', label: 'KPHK – Palm Beach Co. Glades' },
   { id: 'KOBE', label: 'KOBE – Okeechobee' },
-  { id: '2IS', label: '2IS – Islamorada (via KMIA)' },
+  { id: '2IS', label: '2IS – Airglades (via KOBE)' },
 ];
 
 function getMetarStation(airport: string): string {
