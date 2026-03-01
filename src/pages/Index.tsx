@@ -1,4 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
+import { format, addDays, subDays, isToday, isTomorrow, isYesterday } from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Header from '@/components/aeroplan/Header';
 import MetarRibbon from '@/components/aeroplan/MetarRibbon';
 import Timeline from '@/components/aeroplan/Timeline';
@@ -14,6 +16,7 @@ import {
   aircraftToColumns, instructorsToColumns, roomsToColumns,
 } from '@/data/aeroplan';
 import { Plane, GraduationCap, DoorOpen, Settings2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 type TabValue = 'aircraft' | 'instructors' | 'rooms' | 'custom';
 
@@ -98,8 +101,6 @@ const Index = () => {
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
       <Header
-        selectedDate={selectedDate}
-        onDateChange={setSelectedDate}
         pendingCount={pendingCount}
         onBookFlight={() => setBookingOpen(true)}
         onOpenPending={() => setPendingOpen(true)}
@@ -107,7 +108,30 @@ const Index = () => {
 
       <div className="flex-1 flex flex-col min-h-0 mx-3 mb-1 mt-2">
         <div className="bg-card rounded-xl shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
-          <div className="px-4 pt-3 pb-2">
+          {/* Date nav - full width */}
+          <div className="flex items-center justify-center gap-2 px-4 pt-3 pb-2 border-b border-border">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-center min-w-[220px]">
+              {(isToday(selectedDate) ? 'Today' : isYesterday(selectedDate) ? 'Yesterday' : isTomorrow(selectedDate) ? 'Tomorrow' : null) && (
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  {isToday(selectedDate) ? 'Today' : isYesterday(selectedDate) ? 'Yesterday' : 'Tomorrow'}
+                </span>
+              )}
+              <div className="text-lg font-bold text-foreground leading-tight">{format(selectedDate, 'EEEE, MMMM d')}</div>
+            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            {!isToday(selectedDate) && (
+              <Button variant="outline" size="sm" className="ml-2 text-xs h-7" onClick={() => setSelectedDate(new Date())}>
+                Today
+              </Button>
+            )}
+          </div>
+
+          <div className="px-4 pt-2 pb-2">
             <MetarRibbon />
           </div>
 
