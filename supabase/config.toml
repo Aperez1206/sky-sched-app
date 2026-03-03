@@ -1,0 +1,4 @@
+project_id = "ehwssxpmsgfoeuipmeyo"
+
+[functions.aviation-data]
+verify_jwt = false
