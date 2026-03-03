@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMetar, AIRPORT_OPTIONS } from '@/hooks/useMetar';
-import { RefreshCw, Cloud, Wind, Eye, Thermometer, Gauge, ChevronDown } from 'lucide-react';
+import { RefreshCw, Cloud, Wind, Eye, Thermometer, Gauge, ChevronDown, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -37,6 +38,7 @@ export default function MetarRibbon() {
   const [airport, setAirport] = useState('KOPF');
   const [rawOpen, setRawOpen] = useState(false);
   const { data, loading, refresh } = useMetar(airport);
+  const navigate = useNavigate();
   const { age, isStale } = useMetarAge(data?.lastUpdated);
 
   if (!data) return null;
@@ -75,6 +77,15 @@ export default function MetarRibbon() {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-[10px] text-muted-foreground px-2 gap-1 hover:text-foreground"
+            onClick={() => navigate('/dispatch')}
+          >
+            <Radio className="h-3 w-3" />
+            Dispatch
+          </Button>
           <Collapsible open={rawOpen} onOpenChange={setRawOpen}>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="h-6 text-[10px] text-muted-foreground px-2 gap-1 hover:text-foreground">
