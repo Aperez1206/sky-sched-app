@@ -1,3 +1,4 @@
+import { useAuth, AppRole } from '@/hooks/useAuth';
 import { UserRole } from '@/data/aeroplan';
 
 interface CurrentUser {
@@ -6,5 +7,9 @@ interface CurrentUser {
 }
 
 export function useCurrentUser(): CurrentUser {
-  return { name: 'Chief Administrator', role: 'admin' };
+  const { profile, role } = useAuth();
+  return {
+    name: profile?.full_name || 'User',
+    role: (role as UserRole) || 'student',
+  };
 }
