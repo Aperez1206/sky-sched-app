@@ -1,82 +1,96 @@
 
 
-## Hobbs/Tach Time Tracker & Person Detail View
+## Account Dashboard & Course Tracking
 
-This is a multi-part feature covering database schema, check-out/check-in workflow, and a person detail page with session logs.
+### Overview
 
-### Database Changes
+Transform the PersonDetailPage into a rich dashboard with balance, transactions, reservations, sessions, courses, and documents. Add a "Dashboard" nav item for the logged-in user's own view. The same dashboard layout is used when an admin clicks a person in the People tab.
 
-**New table: `flight_sessions`** — logs each completed flight with times and instruction data.
+### Database Changes (4 new tables, 1 storage bucket)
 
+**1. `courses`** — catalog of available courses
 | Column | Type | Notes |
 |--------|------|-------|
 | id | uuid PK | |
-| reservation_id | uuid FK → flight_reservations | nullable (manual sessions) |
-| aircraft_tail | text | not null |
-| student_id | uuid FK → profiles | nullable |
-| instructor_id | uuid FK → profiles | nullable |
-| checked_out_by | uuid FK → profiles | dispatcher who checked out |
-| checked_out_at | timestamptz | when keys given |
-| checked_in_at | timestamptz | nullable, set on check-in |
-| hobbs_in | numeric | auto-filled from prior session's hobbs_out for same aircraft |
-| hobbs_out | numeric | nullable, entered on check-in |
-| tach_in | numeric | auto-filled from prior session's tach_out for same aircraft |
-| tach_out | numeric | nullable, entered on check-in |
-| flight_instruction | numeric | nullable, pre-filled with hobbs difference when instructor present |
-| ground_instruction | numeric | nullable, optional |
-| status | text | 'checked_out' or 'completed' |
+| name | text | e.g. "Part 141 – Private Pilot" |
+| description | text | nullable |
+| created_at | timestamptz | default now() |
 
-**RLS policies:**
-- Authenticated can read all sessions
-- Admin/dispatch can insert and update
-- Students/instructors can read their own sessions
+RLS: authenticated can read, admin can manage.
 
-**DB function: `get_last_times(aircraft_tail text)`** — returns the most recent hobbs_out and tach_out for a given aircraft, used to auto-fill hobbs_in and tach_in on check-out.
+**2. `course_enrollments`** — links users to courses with status
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | |
+| user_id | uuid FK → profiles | |
+| course_id | uuid FK → courses | |
+| status | text | 'enrolled' or 'graduated' |
+| enrolled_at | timestamptz | default now() |
+| graduated_at | timestamptz | nullable |
 
-Also update `flight_reservations` to add a `checkout_status` column (text, default null) with values: null (not checked out), 'checked_out', 'checked_in'.
+RLS: authenticated can read all, admin can insert/update/delete.
 
-### UI: Check-Out / Check-In on Reservations
+**3. `account_transactions`** — ledger for balance tracking
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | |
+| user_id | uuid FK → profiles | |
+| amount | numeric | positive = credit, negative = charge |
+| description | text | e.g. "Flight session – N12345" or "Funds added" |
+| reference_type | text | nullable, e.g. 'flight_session', 'ground_instruction', 'payment' |
+| reference_id | uuid | nullable, FK to session or payment |
+| created_at | timestamptz | default now() |
 
-**Where it appears:** On the schedule Timeline, booking hover cards and/or a booking detail view will show "Check Out" and "Check In" buttons for admin/dispatch users.
+RLS: users can read their own, admin/dispatch can read all and insert.
 
-**Check-Out flow (modal):**
-- Dispatcher confirms aircraft, student, instructor, and reservation details
-- Confirms weather minimums and W&B are within limits (checkbox acknowledgment)
-- Creates a `flight_sessions` row with status='checked_out', auto-fills hobbs_in/tach_in from the last session for that aircraft
-- Updates the reservation's `checkout_status` to 'checked_out'
+**4. `user_documents`** — metadata for admin-uploaded documents
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | |
+| user_id | uuid FK → profiles | |
+| name | text | display name |
+| file_path | text | storage path |
+| uploaded_by | uuid FK → profiles | admin who uploaded |
+| created_at | timestamptz | default now() |
 
-**Check-In flow (modal):**
-- Dispatcher enters hobbs_out and tach_out
-- Hobbs Time and Tach Time are computed live (out minus in)
-- If instructor is present: Flight Instruction field pre-filled with hobbs difference, Ground Instruction field (optional)
-- On confirm: updates the session row with times, sets status='completed', updates reservation checkout_status to 'checked_in'
+RLS: users can read their own, admin can manage all.
 
-### UI: Person Detail Page
+**Storage bucket:** `user-documents` (private, admin can upload, users can read their own).
 
-**Routing:** Add `/people/:personId` route. Clicking a row in the People table navigates to this detail page.
+**Update `flight_sessions`:** Add `course_id` column (uuid, nullable, FK → courses) to associate sessions with a course for the dropdown filter.
 
-**Layout:** Sub-header with person name/role, then three tabs:
-- **Sessions** — Table of flight_sessions for that person (as student or instructor). Columns: Date, Aircraft, Hobbs In/Out, Tach In/Out, Flight Time, Tach Time, and either "Dual Received" (student view) or "Dual Given" (instructor view) showing the flight_instruction value. Ground instruction shown if present.
-- **Courses** — Placeholder for future course tracking
-- **Documents** — Placeholder for future document management
+### Navigation
+
+Add a **"Dashboard"** item to the sidebar (icon: `LayoutDashboard`), route `/dashboard`. This shows the logged-in user's own dashboard. The People tab detail view (`/people/:personId`) uses the same dashboard component but for the selected person (with admin-only features like uploading docs, managing enrollment).
+
+### Dashboard Layout (PersonDetailPage redesign)
+
+Header with person name/role, then a grid/tile layout:
+
+**Row 1 — Summary Cards:**
+- **Balance** card: shows current balance (sum of account_transactions), with "Add Funds" button (placeholder for Stripe integration later)
+- **Recent Transactions** card: last 5 transactions with amount, description, date
+
+**Row 2 — Tabs section** (replaces current simple tabs):
+- **Reservations** tab: upcoming flight_reservations for this person (as student or instructor), showing date, aircraft, flight type, status
+- **Sessions** tab: completed flight_sessions (existing table). Add a course filter dropdown at the top — queries by `course_id` on flight_sessions. Shows hobbs/tach/instruction data with Dual Given vs Dual Received logic
+- **Courses** tab: list of course_enrollments for this person with course name and status badge (enrolled/graduated). Admin sees manage buttons
+- **Documents** tab: list of user_documents with download links. Admin sees an upload button; regular users cannot upload
 
 ### Files to create/modify
 
 | File | Change |
 |------|--------|
-| Migration SQL | Create `flight_sessions` table, add `checkout_status` to `flight_reservations`, create `get_last_times` function, RLS policies |
-| `src/components/aeroplan/CheckOutModal.tsx` | New — check-out confirmation modal |
-| `src/components/aeroplan/CheckInModal.tsx` | New — check-in modal with hobbs/tach entry and instruction fields |
-| `src/components/aeroplan/Timeline.tsx` | Add Check Out / Check In buttons to booking hover cards (admin/dispatch only) |
-| `src/pages/PeoplePage.tsx` | Make table rows clickable, navigate to person detail |
-| `src/pages/PersonDetailPage.tsx` | New — detail view with Sessions/Courses/Documents tabs |
-| `src/App.tsx` | Add `/people/:personId` route |
-| `src/hooks/useFlightSessions.ts` | New — queries flight_sessions for a person |
-
-### Technical Notes
-
-- Hobbs/Tach values stored as `numeric` to support decimal hours (e.g., 1234.5)
-- Flight time = hobbs_out - hobbs_in; Tach time = tach_out - tach_in
-- The "last times" function queries: `SELECT hobbs_out, tach_out FROM flight_sessions WHERE aircraft_tail = $1 AND status = 'completed' ORDER BY checked_in_at DESC LIMIT 1`
-- Person identification in the People page will use profiles table IDs for navigation
+| Migration SQL | Create `courses`, `course_enrollments`, `account_transactions`, `user_documents` tables; add `course_id` to `flight_sessions`; storage bucket; RLS policies |
+| `src/components/AppSidebar.tsx` | Add "Dashboard" nav item |
+| `src/App.tsx` | Add `/dashboard` route |
+| `src/pages/DashboardPage.tsx` | New — logged-in user's dashboard (reuses dashboard component) |
+| `src/pages/PersonDetailPage.tsx` | Full redesign — balance card, transactions, tabbed reservations/sessions/courses/documents |
+| `src/hooks/useAccountData.ts` | New — hooks for balance, transactions, enrollments, documents |
+| `src/components/dashboard/BalanceCard.tsx` | Balance display + add funds button |
+| `src/components/dashboard/TransactionsCard.tsx` | Recent transactions list |
+| `src/components/dashboard/SessionsTab.tsx` | Sessions table with course filter dropdown |
+| `src/components/dashboard/CoursesTab.tsx` | Course enrollments list |
+| `src/components/dashboard/DocumentsTab.tsx` | Documents list with admin upload |
+| `src/components/dashboard/ReservationsTab.tsx` | Future reservations list |
 
