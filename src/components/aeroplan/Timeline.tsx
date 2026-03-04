@@ -245,7 +245,13 @@ export default function Timeline({ columns, bookings, selectedDate, aircraftList
                         {isPending && <div className="text-[9px] font-semibold mt-0.5" style={{ color: ft.color }}>Pending</div>}
                       </div>
                     </HoverCardTrigger>
-                    <HoverCardContent side="right" className="w-72 p-0 overflow-hidden">
+                    <HoverCardContent
+                      side="right"
+                      className="w-72 p-0 overflow-hidden"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onMouseUp={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="h-1.5" style={{ backgroundColor: ft.color }} />
                       <div className="p-3 space-y-2">
                         <div className="font-bold text-sm" style={{ color: ft.color }}>{ft.label}</div>
@@ -264,12 +270,22 @@ export default function Timeline({ columns, bookings, selectedDate, aircraftList
                         {(userRole === 'admin' || userRole === 'dispatch') && booking.status === 'confirmed' && (
                           <div className="flex gap-2 mt-2 pt-2 border-t border-border">
                             {(!booking.checkoutStatus || booking.checkoutStatus === null) && (
-                              <Button size="sm" className="h-7 text-xs flex-1" onClick={(e) => { e.stopPropagation(); onCheckOut?.(booking); }}>
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs flex-1"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => { e.stopPropagation(); onCheckOut?.(booking); }}
+                              >
                                 Check Out
                               </Button>
                             )}
                             {booking.checkoutStatus === 'checked_out' && (
-                              <Button size="sm" className="h-7 text-xs flex-1" onClick={(e) => { e.stopPropagation(); onCheckIn?.(booking); }}>
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs flex-1"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => { e.stopPropagation(); onCheckIn?.(booking); }}
+                              >
                                 Check In
                               </Button>
                             )}
