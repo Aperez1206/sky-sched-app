@@ -94,10 +94,10 @@ export function roomsToColumns(rooms: Room[]): ScheduleColumn[] {
 export const FLIGHT_TYPES: FlightType[] = [
   { id: 'private', label: 'Part 141 – Private Pilot', cssVar: '--flight-private', color: '#0ea5e9' },
   { id: 'instrument', label: 'Part 141 – Instrument Rating', cssVar: '--flight-instrument', color: '#8b5cf6' },
-  { id: 'part61', label: 'Part 61 Instruction', cssVar: '--flight-part61', color: '#f97316' },
-  { id: 'solo', label: 'Solo', cssVar: '--flight-solo', color: '#10b981' },
-  { id: 'rental', label: 'Time Building / Rental', cssVar: '--flight-rental', color: '#f59e0b' },
-  { id: 'maintenance', label: 'Maintenance', cssVar: '--flight-maintenance', color: '#d97706' },
+  { id: 'part61', label: 'Part 61 Instruction', cssVar: '--flight-part61', color: '#eab308' },
+  { id: 'solo', label: 'Solo', cssVar: '--flight-solo', color: '#ec4899' },
+  { id: 'rental', label: 'Time Building / Rental', cssVar: '--flight-rental', color: '#1e3a5f' },
+  { id: 'maintenance', label: 'Maintenance', cssVar: '--flight-maintenance', color: '#6b7280' },
 ];
 
 export const STUDENTS = [

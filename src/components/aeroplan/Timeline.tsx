@@ -227,7 +227,12 @@ export default function Timeline({ columns, bookings, selectedDate, aircraftList
                     <HoverCardTrigger asChild>
                       <div
                         className="absolute rounded-lg px-2 py-1 cursor-pointer transition-shadow hover:shadow-md overflow-hidden z-10"
-                        style={{ top, left, width: COL_WIDTH - 8, height: Math.max(height, 24), backgroundColor: ft.color + '18', border: `2px ${isPending ? 'dashed' : 'solid'} ${ft.color}`, opacity: isPending ? 0.7 : 1 }}
+                        style={{
+                          top, left, width: COL_WIDTH - 8, height: Math.max(height, 24),
+                          backgroundColor: booking.checkoutStatus === 'checked_in' ? '#16a34a18' : booking.checkoutStatus === 'checked_out' ? '#16a34a18' : ft.color + '18',
+                          border: `2px ${isPending ? 'dashed' : booking.checkoutStatus === 'checked_out' ? 'dashed' : 'solid'} ${booking.checkoutStatus === 'checked_in' ? '#16a34a' : booking.checkoutStatus === 'checked_out' ? '#166534' : ft.color}`,
+                          opacity: isPending ? 0.7 : 1,
+                        }}
                         onMouseDown={e => e.stopPropagation()}
                       >
                         <div className="text-[10px] font-bold truncate" style={{ color: ft.color }}>
@@ -259,12 +264,12 @@ export default function Timeline({ columns, bookings, selectedDate, aircraftList
                         {(userRole === 'admin' || userRole === 'dispatch') && booking.status === 'confirmed' && (
                           <div className="flex gap-2 mt-2 pt-2 border-t border-border">
                             {(!booking.checkoutStatus || booking.checkoutStatus === null) && (
-                              <Button size="sm" className="h-7 text-xs flex-1" onClick={() => onCheckOut?.(booking)}>
+                              <Button size="sm" className="h-7 text-xs flex-1" onClick={(e) => { e.stopPropagation(); onCheckOut?.(booking); }}>
                                 Check Out
                               </Button>
                             )}
                             {booking.checkoutStatus === 'checked_out' && (
-                              <Button size="sm" className="h-7 text-xs flex-1" onClick={() => onCheckIn?.(booking)}>
+                              <Button size="sm" className="h-7 text-xs flex-1" onClick={(e) => { e.stopPropagation(); onCheckIn?.(booking); }}>
                                 Check In
                               </Button>
                             )}
