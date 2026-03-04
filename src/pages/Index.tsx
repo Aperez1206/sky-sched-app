@@ -1,7 +1,7 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { format, addDays, subDays, isToday, isTomorrow, isYesterday } from 'date-fns';
+import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import Header from '@/components/aeroplan/Header';
 import MetarRibbon from '@/components/aeroplan/MetarRibbon';
 import Timeline from '@/components/aeroplan/Timeline';
 import BookingModal, { BookingInitialData } from '@/components/aeroplan/BookingModal';
@@ -23,6 +23,7 @@ type TabValue = 'aircraft' | 'instructors' | 'rooms' | 'custom';
 
 const Index = () => {
   const currentUser = useCurrentUser();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [bookings, setBookings] = useState<Booking[]>(SAMPLE_BOOKINGS);
   const [aircraftList, setAircraftList] = useState<Aircraft[]>(AIRCRAFT);
@@ -34,6 +35,18 @@ const Index = () => {
   const [customSelection, setCustomSelection] = useState<{ aircraft: string[]; instructors: string[]; rooms: string[] }>({
     aircraft: [], instructors: [], rooms: [],
   });
+
+  // Auto-open modals from URL params
+  useEffect(() => {
+    if (searchParams.get('book') === '1') {
+      setBookingOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+    if (searchParams.get('pending') === '1') {
+      setPendingOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const pendingCount = bookings.filter(b => b.status === 'pending').length;
   const statusAircraft = statusTail ? aircraftList.find(a => a.tailNumber === statusTail) || null : null;
@@ -101,13 +114,7 @@ const Index = () => {
   const allRoomIds = ROOMS.map(r => r.name);
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
-      <Header
-        pendingCount={pendingCount}
-        onBookFlight={() => setBookingOpen(true)}
-        onOpenPending={() => setPendingOpen(true)}
-      />
-
+    <div className="flex flex-col h-full bg-background overflow-hidden">
       <div className="flex-1 flex flex-col min-h-0 mx-3 mb-1 mt-2">
         <div className="bg-card rounded-xl shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
           <div className="px-4 pt-2 pb-2">

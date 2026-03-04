@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Header } from "@/components/dispatch/Header";
+import { DispatchToolbar } from "@/components/dispatch/DispatchToolbar";
 import { GoNoGoColumn } from "@/components/dispatch/GoNoGoColumn";
 import { WindPanel } from "@/components/dispatch/WindPanel";
 import { WeatherPanel } from "@/components/dispatch/WeatherPanel";
@@ -25,25 +25,10 @@ const DispatchPage = () => {
   const { runways, loading: runwaysLoading } = useRunways(airport);
   const { statuses } = useFleetStatus(tailNumbers);
 
-  const handleAirportChange = (icao: string) => {
-    setAirport(icao);
-    saveAirport(icao);
-  };
-
-  const handleOpsModeChange = (mode: OpsMode) => {
-    setOpsMode(mode);
-    saveOpsMode(mode);
-  };
-
-  const handleSaveMinimums = (mins: WeatherMinimum[]) => {
-    setMinimums(mins);
-    saveMinimums(mins);
-  };
-
-  const handleSaveFleet = (tails: string[]) => {
-    setTailNumbers(tails);
-    saveFleetTailNumbers(tails);
-  };
+  const handleAirportChange = (icao: string) => { setAirport(icao); saveAirport(icao); };
+  const handleOpsModeChange = (mode: OpsMode) => { setOpsMode(mode); saveOpsMode(mode); };
+  const handleSaveMinimums = (mins: WeatherMinimum[]) => { setMinimums(mins); saveMinimums(mins); };
+  const handleSaveFleet = (tails: string[]) => { setTailNumbers(tails); saveFleetTailNumbers(tails); };
 
   const windComponents: WindComponent[] = useMemo(() => {
     let activeRunways = runways;
@@ -52,39 +37,28 @@ const DispatchPage = () => {
       activeRunways = runways.filter((r) => allowed.includes(r.id));
     }
     if (!metar || metar.windDirection === null || metar.windSpeed === null) {
-      return activeRunways.map((r) => ({
-        runwayId: r.id,
-        runwayHeading: r.heading,
-        headwind: 0,
-        crosswind: 0,
-        favorable: true,
-      }));
+      return activeRunways.map((r) => ({ runwayId: r.id, runwayHeading: r.heading, headwind: 0, crosswind: 0, favorable: true }));
     }
     return activeRunways.map((r) => {
       const calc = calculateWindComponents(r.heading, metar.windDirection!, metar.windSpeed!, metar.windGust ?? undefined);
-      return {
-        runwayId: r.id,
-        runwayHeading: r.heading,
-        ...calc,
-        favorable: calc.headwind > 0 && calc.crosswind <= 15,
-      };
+      return { runwayId: r.id, runwayHeading: r.heading, ...calc, favorable: calc.headwind > 0 && calc.crosswind <= 15 };
     });
   }, [runways, metar, airport, opsMode]);
 
   return (
     <div className="flex flex-col h-full bg-background">
-      <Header
-        selectedAirport={airport}
-        onAirportChange={handleAirportChange}
-        opsMode={opsMode}
-        onOpsModeChange={handleOpsModeChange}
-        onSettingsOpen={() => setSettingsOpen(true)}
-        onRefresh={refresh}
-        secondsUntilRefresh={secondsUntilRefresh}
-        loading={metarLoading}
-      />
-
       <main className="flex-1 overflow-hidden flex flex-col gap-3 p-3">
+        <DispatchToolbar
+          selectedAirport={airport}
+          onAirportChange={handleAirportChange}
+          opsMode={opsMode}
+          onOpsModeChange={handleOpsModeChange}
+          onSettingsOpen={() => setSettingsOpen(true)}
+          onRefresh={refresh}
+          secondsUntilRefresh={secondsUntilRefresh}
+          loading={metarLoading}
+        />
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0 overflow-auto max-h-[40%]">
           {PILOT_LEVELS.map((level) => (
             <GoNoGoColumn
