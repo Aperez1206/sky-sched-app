@@ -1,24 +1,59 @@
 
 
-## Fix Sidebar Tooltip z-index & Match Dispatch to Light Theme
+## Persistent Global Header, Dispatch Toolbar, and Tooltip Fix
 
-Two issues to address:
+### 1. Move AeroPlan Header to AppLayout (shared across all pages)
 
-### 1. Sidebar tooltip appearing behind content
+Extract the `Header` component from `Index.tsx` into `AppLayout.tsx` so it renders above `<Outlet />` on every page. The Header needs state for pending count, booking modal, and pending modal -- these will be lifted to `AppLayout` or managed via context. For now, pass `onBookFlight` that navigates to `/` and triggers the booking modal (via a URL search param like `?book=1`).
 
-The sidebar tooltips use `z-50` but the main content area overlaps them. Fix by adding a higher z-index to the `TooltipContent` component in `src/components/ui/tooltip.tsx` -- change `z-50` to `z-[100]` so tooltips always render on top.
+**AppLayout.tsx** changes:
+- Import and render `Header` above `<Outlet />`
+- Add state for `pendingCount` (derived from bookings -- for now keep it simple, pass 0 on non-schedule pages or lift bookings state)
+- `onBookFlight`: use `useNavigate('/?book=1')` to navigate to schedule and open modal
+- `onOpenPending`: use `useNavigate('/?pending=1')`
 
-### 2. Restyle Dispatch page to match light theme
+**Index.tsx** changes:
+- Remove `<Header />` from the page (it's now in layout)
+- Read `?book=1` and `?pending=1` search params to auto-open modals on mount
+- Remove `h-screen` in favor of `h-full` since layout now handles outer structure
 
-Remove the `.dispatch-dark` wrapper class from `DispatchPage.tsx` so the dispatch page uses the same light theme (slate-100 background, white cards, Plus Jakarta Sans) as the rest of the app. The scoped dark CSS variables in `index.css` under `.dispatch-dark` can be kept (harmless) or removed.
+### 2. Keep page sub-headers on People, Aircraft, Billing
 
-**Files to modify:**
+These pages already have their own lightweight headers with icon + title. Keep them as-is but they no longer need the sidebar toggle button (that's in the global header now).
+
+### 3. Refactor Dispatch page
+
+**Remove** the dispatch `Header` component's full header. Replace it with a **thin toolbar row** that contains only:
+- Airport selector dropdown
+- OPS mode toggle (09/27)
+- Refresh countdown timer
+- Refresh button
+- Settings button
+
+This toolbar sits directly above the GO/NO-GO grid inside `DispatchPage.tsx`, styled as a compact bar (`py-1.5`, `bg-card`, `rounded-xl`, matching the card style).
+
+**DispatchPage.tsx** changes:
+- Remove `<Header />` import
+- Add inline toolbar or a new `DispatchToolbar` component with the controls
+- Remove the `dispatch/Header.tsx` usage (can repurpose the file as `DispatchToolbar.tsx`)
+
+### 4. Fix sidebar tooltip z-index
+
+The tooltip already has `z-[100]` but the sidebar itself uses `z-10`. The issue is likely that the main content area's cards/panels create a new stacking context. Fix by ensuring the sidebar's fixed container uses a higher z-index.
+
+**sidebar.tsx** line 195: Change `z-10` to `z-50` on the sidebar's fixed `div` so it and its tooltips layer above content.
+
+### Files to modify
 
 | File | Change |
 |------|--------|
-| `src/components/ui/tooltip.tsx` | Change `z-50` to `z-[100]` on TooltipContent |
-| `src/pages/DispatchPage.tsx` | Remove `dispatch-dark` class from root div, change `h-screen` to `h-full` to fit within the layout properly |
-| `src/components/dispatch/Header.tsx` | Adjust header styling to match app's light theme (white bg, slate text) |
-| `src/components/dispatch/FleetStatusRibbon.tsx` | Ensure ribbon uses light theme card styling |
-| `src/index.css` | Optionally remove or keep `.dispatch-dark` block (no functional impact once unused) |
+| `src/components/AppLayout.tsx` | Add shared `Header`, lift booking/pending navigation |
+| `src/components/aeroplan/Header.tsx` | Make it work standalone in layout (remove sidebar toggle if needed, or keep it) |
+| `src/pages/Index.tsx` | Remove `<Header />`, read URL params for auto-open modals, use `h-full` |
+| `src/pages/PeoplePage.tsx` | Change `h-screen` to `h-full` |
+| `src/pages/AircraftPage.tsx` | Change `h-screen` to `h-full` |
+| `src/pages/BillingPage.tsx` | Change `h-screen` to `h-full` |
+| `src/components/dispatch/Header.tsx` | Rename/refactor to `DispatchToolbar` -- compact row with airport, OPS, refresh, settings only |
+| `src/pages/DispatchPage.tsx` | Replace `<Header>` with `<DispatchToolbar>`, remove title/branding |
+| `src/components/ui/sidebar.tsx` | Bump fixed sidebar `z-10` to `z-50` |
 
