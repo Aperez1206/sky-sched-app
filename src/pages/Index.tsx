@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import MetarRibbon from '@/components/aeroplan/MetarRibbon';
 import Timeline from '@/components/aeroplan/Timeline';
 import BookingModal, { BookingInitialData } from '@/components/aeroplan/BookingModal';
+import CheckOutModal from '@/components/aeroplan/CheckOutModal';
+import CheckInModal from '@/components/aeroplan/CheckInModal';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import PendingModal from '@/components/aeroplan/PendingModal';
 import StatusModal from '@/components/aeroplan/StatusModal';
@@ -32,6 +34,8 @@ const Index = () => {
   const [statusTail, setStatusTail] = useState<string | null>(null);
   const [bookingInitial, setBookingInitial] = useState<BookingInitialData | null>(null);
   const [activeTab, setActiveTab] = useState<TabValue>('aircraft');
+  const [checkOutBooking, setCheckOutBooking] = useState<Booking | null>(null);
+  const [checkInBooking, setCheckInBooking] = useState<Booking | null>(null);
   const [customSelection, setCustomSelection] = useState<{ aircraft: string[]; instructors: string[]; rooms: string[] }>({
     aircraft: [], instructors: [], rooms: [],
   });
@@ -200,6 +204,9 @@ const Index = () => {
             aircraftList={aircraftList}
             onEditStatus={setStatusTail}
             onDragCreate={handleDragCreate}
+            onCheckOut={setCheckOutBooking}
+            onCheckIn={setCheckInBooking}
+            userRole={currentUser.role}
           />
         </div>
       </div>
@@ -226,6 +233,26 @@ const Index = () => {
         onClose={() => setStatusTail(null)}
         aircraft={statusAircraft}
         onSave={handleStatusSave}
+      />
+      <CheckOutModal
+        open={!!checkOutBooking}
+        onClose={() => setCheckOutBooking(null)}
+        booking={checkOutBooking}
+        onComplete={() => {
+          if (checkOutBooking) {
+            setBookings(prev => prev.map(b => b.id === checkOutBooking.id ? { ...b, checkoutStatus: 'checked_out' } : b));
+          }
+        }}
+      />
+      <CheckInModal
+        open={!!checkInBooking}
+        onClose={() => setCheckInBooking(null)}
+        booking={checkInBooking}
+        onComplete={() => {
+          if (checkInBooking) {
+            setBookings(prev => prev.map(b => b.id === checkInBooking.id ? { ...b, checkoutStatus: 'checked_in' } : b));
+          }
+        }}
       />
     </div>
   );

@@ -1,3 +1,6 @@
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +23,26 @@ const statusBadge = (status: string) => {
 };
 
 export default function PeoplePage() {
+  const navigate = useNavigate();
+
+  const { data: profiles } = useQuery({
+    queryKey: ['profiles-list'],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('id, full_name, email');
+      return data || [];
+    },
+  });
+
+  const findProfileId = (name: string) => {
+    const p = profiles?.find(pr => pr.full_name.toLowerCase() === name.toLowerCase());
+    return p?.id;
+  };
+
+  const handleRowClick = (name: string) => {
+    const id = findProfileId(name);
+    if (id) navigate(`/people/${id}`);
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
       <header className="flex items-center gap-3 bg-card px-5 py-3 shadow-sm" style={{ borderRadius: '0 0 14px 14px' }}>
@@ -53,7 +76,7 @@ export default function PeoplePage() {
                 </TableHeader>
                 <TableBody>
                   {STAFF.map((s) => (
-                    <TableRow key={s.email}>
+                    <TableRow key={s.email} className="cursor-pointer hover:bg-muted/50" onClick={() => handleRowClick(s.name)}>
                       <TableCell className="font-medium">{s.name}</TableCell>
                       <TableCell>{s.role}</TableCell>
                       <TableCell className="text-muted-foreground">{s.email}</TableCell>
@@ -76,7 +99,7 @@ export default function PeoplePage() {
                 </TableHeader>
                 <TableBody>
                   {INSTRUCTOR_RECORDS.map((inst) => (
-                    <TableRow key={inst.name}>
+                    <TableRow key={inst.name} className="cursor-pointer hover:bg-muted/50" onClick={() => handleRowClick(inst.name)}>
                       <TableCell className="font-medium">{inst.name}</TableCell>
                       <TableCell>{inst.certs}</TableCell>
                       <TableCell>{inst.studentsAssigned}</TableCell>
@@ -100,7 +123,7 @@ export default function PeoplePage() {
                 </TableHeader>
                 <TableBody>
                   {STUDENT_RECORDS.map((st) => (
-                    <TableRow key={st.name}>
+                    <TableRow key={st.name} className="cursor-pointer hover:bg-muted/50" onClick={() => handleRowClick(st.name)}>
                       <TableCell className="font-medium">{st.name}</TableCell>
                       <TableCell>{st.enrolledCourse}</TableCell>
                       <TableCell>{st.assignedInstructor}</TableCell>
