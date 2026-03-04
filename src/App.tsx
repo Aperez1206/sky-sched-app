@@ -11,6 +11,9 @@ import BillingPage from "./pages/BillingPage";
 import DispatchPage from "./pages/DispatchPage";
 import PersonDetailPage from "./pages/PersonDetailPage";
 import DashboardPage from "./pages/DashboardPage";
+import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,8 +25,14 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+          {/* Protected routes */}
           <Route element={<AppLayout />}>
-            <Route path="/" element={<Index />} />
+            <Route path="/schedule" element={<Index />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/people" element={<PeoplePage />} />
             <Route path="/people/:personId" element={<PersonDetailPage />} />

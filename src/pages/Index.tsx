@@ -206,7 +206,7 @@ const Index = () => {
             onDragCreate={handleDragCreate}
             onCheckOut={setCheckOutBooking}
             onCheckIn={setCheckInBooking}
-            userRole={currentUser.role}
+            userRole={(currentUser.user?.role as any) || 'student'}
           />
         </div>
       </div>
@@ -219,7 +219,7 @@ const Index = () => {
         aircraft={aircraftList}
         onConfirm={handleConfirmBooking}
         initialData={bookingInitial}
-        userRole={currentUser.role}
+        userRole={(currentUser.user?.role as any) || 'student'}
       />
       <PendingModal
         open={pendingOpen}
