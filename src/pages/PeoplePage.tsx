@@ -21,14 +21,14 @@ const statusBadge = (status: string) => {
 
 export default function PeoplePage() {
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-full bg-background">
       <header className="flex items-center gap-3 bg-card px-5 py-3 shadow-sm" style={{ borderRadius: '0 0 14px 14px' }}>
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Users className="h-5 w-5" />
         </div>
         <div>
           <h1 className="text-base font-bold leading-tight text-foreground">People</h1>
-          <p className="text-xs text-muted-foreground">Staff, Instructors & Students</p>
+          <p className="text-xs text-muted-foreground">Staff · Instructors · Students</p>
         </div>
       </header>
 

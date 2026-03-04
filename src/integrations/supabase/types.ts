@@ -14,16 +14,195 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      flight_reservations: {
+        Row: {
+          aircraft_tail: string | null
+          booked_by: string
+          created_at: string | null
+          flight_area: string | null
+          flight_type_id: string | null
+          id: string
+          instructor_id: string | null
+          notes: string | null
+          route: string | null
+          scheduled_end: string
+          scheduled_start: string
+          status: string | null
+          student_id: string | null
+        }
+        Insert: {
+          aircraft_tail?: string | null
+          booked_by: string
+          created_at?: string | null
+          flight_area?: string | null
+          flight_type_id?: string | null
+          id?: string
+          instructor_id?: string | null
+          notes?: string | null
+          route?: string | null
+          scheduled_end: string
+          scheduled_start: string
+          status?: string | null
+          student_id?: string | null
+        }
+        Update: {
+          aircraft_tail?: string | null
+          booked_by?: string
+          created_at?: string | null
+          flight_area?: string | null
+          flight_type_id?: string | null
+          id?: string
+          instructor_id?: string | null
+          notes?: string | null
+          route?: string | null
+          scheduled_end?: string
+          scheduled_start?: string
+          status?: string | null
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flight_reservations_booked_by_fkey"
+            columns: ["booked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flight_reservations_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flight_reservations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          course_id: string | null
+          created_at: string | null
+          email: string
+          enrollment_status:
+            | Database["public"]["Enums"]["enrollment_status"]
+            | null
+          full_name: string
+          id: string
+          primary_instructor_id: string | null
+          school_id: string | null
+          secondary_instructor_id: string | null
+        }
+        Insert: {
+          course_id?: string | null
+          created_at?: string | null
+          email: string
+          enrollment_status?:
+            | Database["public"]["Enums"]["enrollment_status"]
+            | null
+          full_name: string
+          id: string
+          primary_instructor_id?: string | null
+          school_id?: string | null
+          secondary_instructor_id?: string | null
+        }
+        Update: {
+          course_id?: string | null
+          created_at?: string | null
+          email?: string
+          enrollment_status?:
+            | Database["public"]["Enums"]["enrollment_status"]
+            | null
+          full_name?: string
+          id?: string
+          primary_instructor_id?: string | null
+          school_id?: string | null
+          secondary_instructor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_primary_instructor_id_fkey"
+            columns: ["primary_instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_secondary_instructor_id_fkey"
+            columns: ["secondary_instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schools: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "dispatch" | "instructor" | "student"
+      enrollment_status: "unenrolled" | "enrolled" | "graduated"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +329,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "dispatch", "instructor", "student"],
+      enrollment_status: ["unenrolled", "enrolled", "graduated"],
+    },
   },
 } as const
