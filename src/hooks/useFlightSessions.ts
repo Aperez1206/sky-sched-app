@@ -42,6 +42,8 @@ export async function getLastTimes(aircraftTail: string): Promise<{ hobbs_out: n
   return { hobbs_out: Number(data[0].hobbs_out), tach_out: Number(data[0].tach_out) };
 }
 
+const isValidUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+
 export async function createCheckOut(params: {
   reservation_id: string;
   aircraft_tail: string;
@@ -51,10 +53,11 @@ export async function createCheckOut(params: {
   hobbs_in: number | null;
   tach_in: number | null;
 }) {
+  const resId = isValidUuid(params.reservation_id) ? params.reservation_id : null;
   const { data, error } = await supabase
     .from('flight_sessions')
     .insert({
-      reservation_id: params.reservation_id,
+      reservation_id: resId,
       aircraft_tail: params.aircraft_tail,
       student_id: params.student_id,
       instructor_id: params.instructor_id,
@@ -67,11 +70,12 @@ export async function createCheckOut(params: {
     .single();
   if (error) throw error;
 
-  // Update reservation checkout_status
-  await supabase
-    .from('flight_reservations')
-    .update({ checkout_status: 'checked_out' })
-    .eq('id', params.reservation_id);
+  if (resId) {
+    await supabase
+      .from('flight_reservations')
+      .update({ checkout_status: 'checked_out' })
+      .eq('id', resId);
+  }
 
   return data;
 }
@@ -97,8 +101,10 @@ export async function completeCheckIn(params: {
     .eq('id', params.session_id);
   if (error) throw error;
 
-  await supabase
-    .from('flight_reservations')
-    .update({ checkout_status: 'checked_in' })
-    .eq('id', params.reservation_id);
+  if (isValidUuid(params.reservation_id)) {
+    await supabase
+      .from('flight_reservations')
+      .update({ checkout_status: 'checked_in' })
+      .eq('id', params.reservation_id);
+  }
 }

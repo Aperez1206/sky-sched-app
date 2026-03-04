@@ -30,12 +30,20 @@ export default function CheckInModal({ open, onClose, booking, onComplete }: Pro
       setFlightInstruction('');
       setGroundInstruction('');
       // Fetch the active session for this reservation
-      supabase
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking.id);
+      let query = supabase
         .from('flight_sessions')
         .select('*')
-        .eq('reservation_id', booking.id)
-        .eq('status', 'checked_out')
-        .single()
+        .eq('status', 'checked_out');
+      
+      if (isUuid) {
+        query = query.eq('reservation_id', booking.id);
+      } else {
+        // For local bookings without UUID, find by aircraft tail and status
+        query = query.eq('aircraft_tail', booking.aircraftTail).is('reservation_id', null);
+      }
+      
+      query.order('checked_out_at', { ascending: false }).limit(1).single()
         .then(({ data }) => {
           if (data) setSession(data as FlightSession);
         });
