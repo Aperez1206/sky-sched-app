@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           aircraft_tail: string | null
           booked_by: string
+          checkout_status: string | null
           created_at: string | null
           flight_area: string | null
           flight_type_id: string | null
@@ -33,6 +34,7 @@ export type Database = {
         Insert: {
           aircraft_tail?: string | null
           booked_by: string
+          checkout_status?: string | null
           created_at?: string | null
           flight_area?: string | null
           flight_type_id?: string | null
@@ -48,6 +50,7 @@ export type Database = {
         Update: {
           aircraft_tail?: string | null
           booked_by?: string
+          checkout_status?: string | null
           created_at?: string | null
           flight_area?: string | null
           flight_type_id?: string | null
@@ -77,6 +80,92 @@ export type Database = {
           },
           {
             foreignKeyName: "flight_reservations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flight_sessions: {
+        Row: {
+          aircraft_tail: string
+          checked_in_at: string | null
+          checked_out_at: string
+          checked_out_by: string
+          created_at: string | null
+          flight_instruction: number | null
+          ground_instruction: number | null
+          hobbs_in: number | null
+          hobbs_out: number | null
+          id: string
+          instructor_id: string | null
+          reservation_id: string | null
+          status: string
+          student_id: string | null
+          tach_in: number | null
+          tach_out: number | null
+        }
+        Insert: {
+          aircraft_tail: string
+          checked_in_at?: string | null
+          checked_out_at?: string
+          checked_out_by: string
+          created_at?: string | null
+          flight_instruction?: number | null
+          ground_instruction?: number | null
+          hobbs_in?: number | null
+          hobbs_out?: number | null
+          id?: string
+          instructor_id?: string | null
+          reservation_id?: string | null
+          status?: string
+          student_id?: string | null
+          tach_in?: number | null
+          tach_out?: number | null
+        }
+        Update: {
+          aircraft_tail?: string
+          checked_in_at?: string | null
+          checked_out_at?: string
+          checked_out_by?: string
+          created_at?: string | null
+          flight_instruction?: number | null
+          ground_instruction?: number | null
+          hobbs_in?: number | null
+          hobbs_out?: number | null
+          id?: string
+          instructor_id?: string | null
+          reservation_id?: string | null
+          status?: string
+          student_id?: string | null
+          tach_in?: number | null
+          tach_out?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flight_sessions_checked_out_by_fkey"
+            columns: ["checked_out_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flight_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flight_sessions_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "flight_reservations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flight_sessions_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -192,6 +281,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_last_times: {
+        Args: { _aircraft_tail: string }
+        Returns: {
+          hobbs_out: number
+          tach_out: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -46,6 +46,7 @@ export interface Booking {
   bookedBy: 'admin' | 'instructor' | 'student';
   roomName?: string;
   notes?: string;
+  checkoutStatus?: string | null;
 }
 
 export const AIRCRAFT: Aircraft[] = [

@@ -11,6 +11,9 @@ interface TimelineProps {
   aircraftList?: Aircraft[];
   onEditStatus?: (tail: string) => void;
   onDragCreate?: (columnId: string, columnType: 'aircraft' | 'instructor' | 'room', startDate: Date, endDate: Date) => void;
+  onCheckOut?: (booking: Booking) => void;
+  onCheckIn?: (booking: Booking) => void;
+  userRole?: string;
 }
 
 const STATUS_STYLES: Record<string, { bg: string; dot: string; pulse: boolean }> = {
@@ -37,7 +40,7 @@ function getBookingsForColumn(col: ScheduleColumn, bookings: Booking[]): Booking
   }
 }
 
-export default function Timeline({ columns, bookings, selectedDate, aircraftList, onEditStatus, onDragCreate }: TimelineProps) {
+export default function Timeline({ columns, bookings, selectedDate, aircraftList, onEditStatus, onDragCreate, onCheckOut, onCheckIn, userRole }: TimelineProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -253,6 +256,23 @@ export default function Timeline({ columns, bookings, selectedDate, aircraftList
                             {booking.status === 'pending' ? 'Pending Authorization' : 'Confirmed'}
                           </span>
                         </div>
+                        {(userRole === 'admin' || userRole === 'dispatch') && booking.status === 'confirmed' && (
+                          <div className="flex gap-2 mt-2 pt-2 border-t border-border">
+                            {(!booking.checkoutStatus || booking.checkoutStatus === null) && (
+                              <Button size="sm" className="h-7 text-xs flex-1" onClick={() => onCheckOut?.(booking)}>
+                                Check Out
+                              </Button>
+                            )}
+                            {booking.checkoutStatus === 'checked_out' && (
+                              <Button size="sm" className="h-7 text-xs flex-1" onClick={() => onCheckIn?.(booking)}>
+                                Check In
+                              </Button>
+                            )}
+                            {booking.checkoutStatus === 'checked_in' && (
+                              <span className="text-xs text-muted-foreground italic">Completed</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </HoverCardContent>
                   </HoverCard>
