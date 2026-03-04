@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, UserPlus } from 'lucide-react';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import AddMemberModal from '@/components/people/AddMemberModal';
 
 interface ProfileWithRole {
   id: string;
@@ -43,6 +47,10 @@ const enrollmentBadge = (status: string | null) => {
 
 export default function PeoplePage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useCurrentUser();
+  const isAdmin = user?.role === 'admin';
+  const [addOpen, setAddOpen] = useState(false);
 
   const { data: people = [], isLoading } = useQuery({
     queryKey: ['people-with-roles'],
@@ -80,16 +88,24 @@ export default function PeoplePage() {
 
   return (
     <div className="flex flex-col h-full bg-background">
-      <header className="flex items-center gap-3 bg-card px-5 py-3 shadow-sm" style={{ borderRadius: '0 0 14px 14px' }}>
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Users className="h-5 w-5" />
+      <header className="flex items-center justify-between bg-card px-5 py-3 shadow-sm" style={{ borderRadius: '0 0 14px 14px' }}>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Users className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="text-base font-bold leading-tight text-foreground">People</h1>
+            <p className="text-xs text-muted-foreground">
+              {staff.length} Staff · {instructors.length} Instructors · {students.length} Students
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-base font-bold leading-tight text-foreground">People</h1>
-          <p className="text-xs text-muted-foreground">
-            {staff.length} Staff · {instructors.length} Instructors · {students.length} Students
-          </p>
-        </div>
+        {isAdmin && (
+          <Button size="sm" className="h-8 gap-1.5 text-xs font-semibold" onClick={() => setAddOpen(true)}>
+            <UserPlus className="h-3.5 w-3.5" />
+            Add Member
+          </Button>
+        )}
       </header>
 
       <div className="flex-1 mx-3 mt-2 mb-1">
@@ -175,6 +191,12 @@ export default function PeoplePage() {
           </Tabs>
         </div>
       </div>
+
+      <AddMemberModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['people-with-roles'] })}
+      />
     </div>
   );
 }

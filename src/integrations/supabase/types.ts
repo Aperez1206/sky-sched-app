@@ -284,6 +284,47 @@ export type Database = {
           },
         ]
       }
+      member_invites: {
+        Row: {
+          course_id: string | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          invited_by: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+        }
+        Insert: {
+          course_id?: string | null
+          created_at?: string | null
+          email: string
+          full_name: string
+          id?: string
+          invited_by: string
+          role: Database["public"]["Enums"]["app_role"]
+          status?: string
+        }
+        Update: {
+          course_id?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          invited_by?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_invites_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           course_id: string | null
