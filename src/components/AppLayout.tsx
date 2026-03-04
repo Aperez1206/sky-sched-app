@@ -16,15 +16,17 @@ export default function AppLayout() {
 
   return (
     <SidebarProvider defaultOpen={false}>
-      <div className="min-h-screen flex w-full">
+      <div className="h-screen flex w-full overflow-hidden">
         <AppSidebar />
-        <div className="flex-1 flex flex-col min-h-0 w-full">
+        <div className="flex-1 flex flex-col min-h-0 w-full overflow-hidden">
           <Header
             pendingCount={0}
             onBookFlight={handleBookFlight}
             onOpenPending={handleOpenPending}
           />
-          <Outlet />
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <Outlet />
+          </div>
         </div>
       </div>
     </SidebarProvider>
