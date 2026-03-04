@@ -1,59 +1,37 @@
 
 
-## Persistent Global Header, Dispatch Toolbar, and Tooltip Fix
+## Fix: Restore Contained Scrollable Timeline
 
-### 1. Move AeroPlan Header to AppLayout (shared across all pages)
+The problem is that after moving the Header into `AppLayout`, the layout no longer constrains the content area's height, so the Timeline expands to its full 24-hour height instead of being a fixed scrollable window.
 
-Extract the `Header` component from `Index.tsx` into `AppLayout.tsx` so it renders above `<Outlet />` on every page. The Header needs state for pending count, booking modal, and pending modal -- these will be lifted to `AppLayout` or managed via context. For now, pass `onBookFlight` that navigates to `/` and triggers the booking modal (via a URL search param like `?book=1`).
+### Root Cause
 
-**AppLayout.tsx** changes:
-- Import and render `Header` above `<Outlet />`
-- Add state for `pendingCount` (derived from bookings -- for now keep it simple, pass 0 on non-schedule pages or lift bookings state)
-- `onBookFlight`: use `useNavigate('/?book=1')` to navigate to schedule and open modal
-- `onOpenPending`: use `useNavigate('/?pending=1')`
+In `AppLayout.tsx`, the outer wrapper uses `min-h-screen` and the content column doesn't enforce a fixed height with overflow containment. The `<Outlet />` (Index page) renders with `h-full` but there's no height constraint from the parent, so `h-full` resolves to auto and the timeline expands fully.
 
-**Index.tsx** changes:
-- Remove `<Header />` from the page (it's now in layout)
-- Read `?book=1` and `?pending=1` search params to auto-open modals on mount
-- Remove `h-screen` in favor of `h-full` since layout now handles outer structure
+### Fix
 
-### 2. Keep page sub-headers on People, Aircraft, Billing
+**`src/components/AppLayout.tsx`** — Change the layout to use `h-screen` and ensure the content area fills remaining space with `overflow-hidden`:
 
-These pages already have their own lightweight headers with icon + title. Keep them as-is but they no longer need the sidebar toggle button (that's in the global header now).
+- Outer div: `min-h-screen` → `h-screen overflow-hidden`
+- Content column (the one containing Header + Outlet): ensure it uses `flex-1 min-h-0 overflow-hidden` so the Outlet is constrained
 
-### 3. Refactor Dispatch page
+```
+<div className="h-screen flex w-full overflow-hidden">
+  <AppSidebar />
+  <div className="flex-1 flex flex-col min-h-0 w-full overflow-hidden">
+    <Header ... />
+    <div className="flex-1 min-h-0 overflow-hidden">
+      <Outlet />
+    </div>
+  </div>
+</div>
+```
 
-**Remove** the dispatch `Header` component's full header. Replace it with a **thin toolbar row** that contains only:
-- Airport selector dropdown
-- OPS mode toggle (09/27)
-- Refresh countdown timer
-- Refresh button
-- Settings button
-
-This toolbar sits directly above the GO/NO-GO grid inside `DispatchPage.tsx`, styled as a compact bar (`py-1.5`, `bg-card`, `rounded-xl`, matching the card style).
-
-**DispatchPage.tsx** changes:
-- Remove `<Header />` import
-- Add inline toolbar or a new `DispatchToolbar` component with the controls
-- Remove the `dispatch/Header.tsx` usage (can repurpose the file as `DispatchToolbar.tsx`)
-
-### 4. Fix sidebar tooltip z-index
-
-The tooltip already has `z-[100]` but the sidebar itself uses `z-10`. The issue is likely that the main content area's cards/panels create a new stacking context. Fix by ensuring the sidebar's fixed container uses a higher z-index.
-
-**sidebar.tsx** line 195: Change `z-10` to `z-50` on the sidebar's fixed `div` so it and its tooltips layer above content.
+This single change restores the fixed viewport behavior where the outer page is static and only the timeline scrolls internally, defaulting to 7 AM on load.
 
 ### Files to modify
 
 | File | Change |
 |------|--------|
-| `src/components/AppLayout.tsx` | Add shared `Header`, lift booking/pending navigation |
-| `src/components/aeroplan/Header.tsx` | Make it work standalone in layout (remove sidebar toggle if needed, or keep it) |
-| `src/pages/Index.tsx` | Remove `<Header />`, read URL params for auto-open modals, use `h-full` |
-| `src/pages/PeoplePage.tsx` | Change `h-screen` to `h-full` |
-| `src/pages/AircraftPage.tsx` | Change `h-screen` to `h-full` |
-| `src/pages/BillingPage.tsx` | Change `h-screen` to `h-full` |
-| `src/components/dispatch/Header.tsx` | Rename/refactor to `DispatchToolbar` -- compact row with airport, OPS, refresh, settings only |
-| `src/pages/DispatchPage.tsx` | Replace `<Header>` with `<DispatchToolbar>`, remove title/branding |
-| `src/components/ui/sidebar.tsx` | Bump fixed sidebar `z-10` to `z-50` |
+| `src/components/AppLayout.tsx` | Fix height constraints: `h-screen overflow-hidden`, wrap `<Outlet />` in a `flex-1 min-h-0 overflow-hidden` container |
 
