@@ -1,96 +1,97 @@
 
 
-## Account Dashboard & Course Tracking
+## Authentication, Invite System, and Landing Page
 
 ### Overview
 
-Transform the PersonDetailPage into a rich dashboard with balance, transactions, reservations, sessions, courses, and documents. Add a "Dashboard" nav item for the logged-in user's own view. The same dashboard layout is used when an admin clicks a person in the People tab.
+There is currently no authentication in the app — `useCurrentUser` is hardcoded. This plan adds: (1) a public landing page, (2) login/signup flow, (3) admin invite system via an edge function, and (4) an "Add Member" button on the People page.
 
-### Database Changes (4 new tables, 1 storage bucket)
+### 1. Database Changes
 
-**1. `courses`** — catalog of available courses
+**`member_invites` table** — tracks pending invitations:
 | Column | Type | Notes |
 |--------|------|-------|
 | id | uuid PK | |
-| name | text | e.g. "Part 141 – Private Pilot" |
-| description | text | nullable |
+| email | text | invitee email |
+| full_name | text | invitee name |
+| role | app_role | student/instructor/admin/dispatch |
+| course_id | uuid nullable | FK → courses, for student enrollment |
+| invited_by | uuid | FK → profiles (admin) |
+| status | text | 'pending' / 'accepted' |
 | created_at | timestamptz | default now() |
 
-RLS: authenticated can read, admin can manage.
+RLS: admin can read/insert/update; no public access.
 
-**2. `course_enrollments`** — links users to courses with status
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | |
-| user_id | uuid FK → profiles | |
-| course_id | uuid FK → courses | |
-| status | text | 'enrolled' or 'graduated' |
-| enrolled_at | timestamptz | default now() |
-| graduated_at | timestamptz | nullable |
+**Update `handle_new_user` trigger**: Check `member_invites` by email on signup — if a matching invite exists, use its role (instead of defaulting to 'student') and mark invite as 'accepted'. If the invite includes a `course_id`, auto-create a `course_enrollments` row.
 
-RLS: authenticated can read all, admin can insert/update/delete.
+### 2. Edge Function: `invite-member`
 
-**3. `account_transactions`** — ledger for balance tracking
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | |
-| user_id | uuid FK → profiles | |
-| amount | numeric | positive = credit, negative = charge |
-| description | text | e.g. "Flight session – N12345" or "Funds added" |
-| reference_type | text | nullable, e.g. 'flight_session', 'ground_instruction', 'payment' |
-| reference_id | uuid | nullable, FK to session or payment |
-| created_at | timestamptz | default now() |
+An edge function that uses the Supabase service role to call `supabase.auth.admin.inviteUserByEmail()`. This sends the user an email with a magic link to set their password.
 
-RLS: users can read their own, admin/dispatch can read all and insert.
+- Accepts: `{ email, full_name, role, course_id? }`
+- Validates the caller is an admin (checks JWT + `has_role`)
+- Inserts a row into `member_invites`
+- Calls `admin.inviteUserByEmail(email, { data: { full_name, role } })`
+- Returns success/error
 
-**4. `user_documents`** — metadata for admin-uploaded documents
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | |
-| user_id | uuid FK → profiles | |
-| name | text | display name |
-| file_path | text | storage path |
-| uploaded_by | uuid FK → profiles | admin who uploaded |
-| created_at | timestamptz | default now() |
+### 3. Landing Page (`/landing` → becomes new `/`)
 
-RLS: users can read their own, admin can manage all.
+A public marketing page for the app with:
+- Hero section explaining the flight school management platform
+- Feature highlights (scheduling, dispatch, billing, course tracking)
+- "Log In" button linking to `/login`
+- Clean, professional design matching the existing card/rounded style
 
-**Storage bucket:** `user-documents` (private, admin can upload, users can read their own).
+### 4. Auth Pages
 
-**Update `flight_sessions`:** Add `course_id` column (uuid, nullable, FK → courses) to associate sessions with a course for the dropdown filter.
+**`/login`** — email + password login form. Redirects to `/schedule` on success.
 
-### Navigation
+**`/reset-password`** — password reset flow (required for invite magic links).
 
-Add a **"Dashboard"** item to the sidebar (icon: `LayoutDashboard`), route `/dashboard`. This shows the logged-in user's own dashboard. The People tab detail view (`/people/:personId`) uses the same dashboard component but for the selected person (with admin-only features like uploading docs, managing enrollment).
+No public signup — users can only join via admin invite.
 
-### Dashboard Layout (PersonDetailPage redesign)
+### 5. Auth Guard
 
-Header with person name/role, then a grid/tile layout:
+**`AuthGuard` component** — wraps the `AppLayout` route. Uses `supabase.auth.onAuthStateChange` + `getSession`. Redirects unauthenticated users to `/login`.
 
-**Row 1 — Summary Cards:**
-- **Balance** card: shows current balance (sum of account_transactions), with "Add Funds" button (placeholder for Stripe integration later)
-- **Recent Transactions** card: last 5 transactions with amount, description, date
+**Update `useCurrentUser`** — replace hardcoded data with real auth session. Fetch profile + role from database.
 
-**Row 2 — Tabs section** (replaces current simple tabs):
-- **Reservations** tab: upcoming flight_reservations for this person (as student or instructor), showing date, aircraft, flight type, status
-- **Sessions** tab: completed flight_sessions (existing table). Add a course filter dropdown at the top — queries by `course_id` on flight_sessions. Shows hobbs/tach/instruction data with Dual Given vs Dual Received logic
-- **Courses** tab: list of course_enrollments for this person with course name and status badge (enrolled/graduated). Admin sees manage buttons
-- **Documents** tab: list of user_documents with download links. Admin sees an upload button; regular users cannot upload
+### 6. Route Changes
 
-### Files to create/modify
+| Route | Component | Auth |
+|-------|-----------|------|
+| `/` | LandingPage | Public |
+| `/login` | LoginPage | Public |
+| `/reset-password` | ResetPasswordPage | Public |
+| `/schedule` | Index (current `/`) | Protected |
+| `/dashboard` | DashboardPage | Protected |
+| `/people` | PeoplePage | Protected |
+| All others | Same as now | Protected |
 
-| File | Change |
+Update `AppSidebar` — Schedule link becomes `/schedule`.
+
+### 7. Add Member Modal on People Page
+
+- "Add Member" button in the People page header (visible to admins)
+- Dialog with fields: Full Name, Email, Role (select: student/instructor/admin/dispatch), Course (select, shown only when role=student, fetches from `courses` table)
+- On submit: calls the `invite-member` edge function
+- Shows success toast; refetches people list
+
+### 8. Files to Create/Modify
+
+| File | Action |
 |------|--------|
-| Migration SQL | Create `courses`, `course_enrollments`, `account_transactions`, `user_documents` tables; add `course_id` to `flight_sessions`; storage bucket; RLS policies |
-| `src/components/AppSidebar.tsx` | Add "Dashboard" nav item |
-| `src/App.tsx` | Add `/dashboard` route |
-| `src/pages/DashboardPage.tsx` | New — logged-in user's dashboard (reuses dashboard component) |
-| `src/pages/PersonDetailPage.tsx` | Full redesign — balance card, transactions, tabbed reservations/sessions/courses/documents |
-| `src/hooks/useAccountData.ts` | New — hooks for balance, transactions, enrollments, documents |
-| `src/components/dashboard/BalanceCard.tsx` | Balance display + add funds button |
-| `src/components/dashboard/TransactionsCard.tsx` | Recent transactions list |
-| `src/components/dashboard/SessionsTab.tsx` | Sessions table with course filter dropdown |
-| `src/components/dashboard/CoursesTab.tsx` | Course enrollments list |
-| `src/components/dashboard/DocumentsTab.tsx` | Documents list with admin upload |
-| `src/components/dashboard/ReservationsTab.tsx` | Future reservations list |
+| Migration SQL | Create `member_invites`, update trigger |
+| `supabase/functions/invite-member/index.ts` | New edge function |
+| `src/pages/LandingPage.tsx` | New — public marketing page |
+| `src/pages/LoginPage.tsx` | New — login form |
+| `src/pages/ResetPasswordPage.tsx` | New — password reset |
+| `src/components/AuthGuard.tsx` | New — session guard wrapper |
+| `src/components/people/AddMemberModal.tsx` | New — invite dialog |
+| `src/hooks/useCurrentUser.ts` | Rewrite — real auth |
+| `src/pages/PeoplePage.tsx` | Add "Add Member" button + modal |
+| `src/App.tsx` | Restructure routes (public vs protected) |
+| `src/components/AppSidebar.tsx` | Update Schedule link to `/schedule` |
+| `src/components/AppLayout.tsx` | Wrap with AuthGuard |
+| `src/components/aeroplan/Header.tsx` | Show real user name/role, add logout |
 
