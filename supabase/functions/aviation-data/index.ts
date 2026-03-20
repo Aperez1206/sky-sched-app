@@ -128,7 +128,25 @@ serve(async (req) => {
     if (action === "metar") {
       const metarIcao = NEAREST_METAR[icao] || icao;
       const metarUrl = `https://aviationweather.gov/api/data/metar?ids=${metarIcao}&format=json`;
-      const res = await fetch(metarUrl);
+
+      let res: Response | null = null;
+      let lastErr = "";
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          res = await fetch(metarUrl);
+          break;
+        } catch (e) {
+          lastErr = e.message || String(e);
+          console.warn(`[metar] Attempt ${attempt + 1} failed: ${lastErr}`);
+          if (attempt < 2) await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        }
+      }
+      if (!res) {
+        return new Response(JSON.stringify({ error: lastErr }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const text = await res.text();
       if (!res.ok) {
         console.error("[metar] API error:", res.status, text.substring(0, 200));
