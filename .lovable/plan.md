@@ -1,97 +1,51 @@
 
 
-## Authentication, Invite System, and Landing Page
+## Seed Demo Data for Testing
 
-### Overview
+### What we'll insert
 
-There is currently no authentication in the app — `useCurrentUser` is hardcoded. This plan adds: (1) a public landing page, (2) login/signup flow, (3) admin invite system via an edge function, and (4) an "Add Member" button on the People page.
+Since profiles doesn't have a foreign key constraint to auth.users (based on the schema), we can insert demo profiles directly. The two real users (Adrian Perez - admin, Andrian Abel - student) will be supplemented with demo people.
 
-### 1. Database Changes
+### Data to seed
 
-**`member_invites` table** — tracks pending invitations:
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid PK | |
-| email | text | invitee email |
-| full_name | text | invitee name |
-| role | app_role | student/instructor/admin/dispatch |
-| course_id | uuid nullable | FK → courses, for student enrollment |
-| invited_by | uuid | FK → profiles (admin) |
-| status | text | 'pending' / 'accepted' |
-| created_at | timestamptz | default now() |
+**1. Courses** (3 rows)
+- Part 141 – Private Pilot
+- Part 141 – Instrument Rating  
+- Part 61 Instruction
 
-RLS: admin can read/insert/update; no public access.
+**2. Demo Profiles + Roles** (10 new people)
+- 4 Instructors: Atlee Julian Eng, Gabriela Murcia, Paul Lewis, Erick Valdez Quinones
+- 4 Students: Marcus Johnson, Emily Chen, David Rodriguez, Sarah Williams
+- 1 Dispatcher: Maria Gonzalez
+- 1 Maintenance: Oscar Delgado (dispatch role)
 
-**Update `handle_new_user` trigger**: Check `member_invites` by email on signup — if a matching invite exists, use its role (instead of defaulting to 'student') and mark invite as 'accepted'. If the invite includes a `course_id`, auto-create a `course_enrollments` row.
+**3. Course Enrollments** (5 rows)
+- Andrian Abel → Private Pilot (enrolled)
+- Marcus Johnson → Private Pilot (enrolled)
+- Emily Chen → Private Pilot (enrolled)
+- David Rodriguez → Instrument Rating (enrolled)
+- Sarah Williams → Part 61 (enrolled)
 
-### 2. Edge Function: `invite-member`
+**4. Flight Reservations** (8 rows)
+- Mix of today and upcoming days, various aircraft/instructor/student combos, some confirmed, some pending
+- Different flight types (private, instrument, part61, solo, rental)
 
-An edge function that uses the Supabase service role to call `supabase.auth.admin.inviteUserByEmail()`. This sends the user an email with a magic link to set their password.
+**5. Completed Flight Sessions** (6 rows)
+- Past sessions with hobbs/tach data filled in, linked to instructors and students
+- Realistic hobbs values (e.g., 1234.5 → 1236.2) and tach values
+- Flight instruction and ground instruction hours populated
 
-- Accepts: `{ email, full_name, role, course_id? }`
-- Validates the caller is an admin (checks JWT + `has_role`)
-- Inserts a row into `member_invites`
-- Calls `admin.inviteUserByEmail(email, { data: { full_name, role } })`
-- Returns success/error
+**6. Account Transactions** (12 rows)
+- Payments added (credits) for students: $2000, $1500, etc.
+- Flight charges (debits) for completed sessions
+- Ground instruction charges
+- Gives students realistic balances
 
-### 3. Landing Page (`/landing` → becomes new `/`)
+### Implementation
 
-A public marketing page for the app with:
-- Hero section explaining the flight school management platform
-- Feature highlights (scheduling, dispatch, billing, course tracking)
-- "Log In" button linking to `/login`
-- Clean, professional design matching the existing card/rounded style
+Use the insert tool to run all INSERT statements across the tables. Generate deterministic UUIDs for the demo profiles so we can reference them in other tables.
 
-### 4. Auth Pages
+### Files to modify
 
-**`/login`** — email + password login form. Redirects to `/schedule` on success.
-
-**`/reset-password`** — password reset flow (required for invite magic links).
-
-No public signup — users can only join via admin invite.
-
-### 5. Auth Guard
-
-**`AuthGuard` component** — wraps the `AppLayout` route. Uses `supabase.auth.onAuthStateChange` + `getSession`. Redirects unauthenticated users to `/login`.
-
-**Update `useCurrentUser`** — replace hardcoded data with real auth session. Fetch profile + role from database.
-
-### 6. Route Changes
-
-| Route | Component | Auth |
-|-------|-----------|------|
-| `/` | LandingPage | Public |
-| `/login` | LoginPage | Public |
-| `/reset-password` | ResetPasswordPage | Public |
-| `/schedule` | Index (current `/`) | Protected |
-| `/dashboard` | DashboardPage | Protected |
-| `/people` | PeoplePage | Protected |
-| All others | Same as now | Protected |
-
-Update `AppSidebar` — Schedule link becomes `/schedule`.
-
-### 7. Add Member Modal on People Page
-
-- "Add Member" button in the People page header (visible to admins)
-- Dialog with fields: Full Name, Email, Role (select: student/instructor/admin/dispatch), Course (select, shown only when role=student, fetches from `courses` table)
-- On submit: calls the `invite-member` edge function
-- Shows success toast; refetches people list
-
-### 8. Files to Create/Modify
-
-| File | Action |
-|------|--------|
-| Migration SQL | Create `member_invites`, update trigger |
-| `supabase/functions/invite-member/index.ts` | New edge function |
-| `src/pages/LandingPage.tsx` | New — public marketing page |
-| `src/pages/LoginPage.tsx` | New — login form |
-| `src/pages/ResetPasswordPage.tsx` | New — password reset |
-| `src/components/AuthGuard.tsx` | New — session guard wrapper |
-| `src/components/people/AddMemberModal.tsx` | New — invite dialog |
-| `src/hooks/useCurrentUser.ts` | Rewrite — real auth |
-| `src/pages/PeoplePage.tsx` | Add "Add Member" button + modal |
-| `src/App.tsx` | Restructure routes (public vs protected) |
-| `src/components/AppSidebar.tsx` | Update Schedule link to `/schedule` |
-| `src/components/AppLayout.tsx` | Wrap with AuthGuard |
-| `src/components/aeroplan/Header.tsx` | Show real user name/role, add logout |
+None — this is data-only, inserted via the database insert tool.
 
