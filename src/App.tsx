@@ -27,6 +27,7 @@ const App = () => (
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
+          {/* Auth disabled */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
