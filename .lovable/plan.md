@@ -1,51 +1,151 @@
+## Admin Tab for School Staff
 
+A new `/admin` route gated to Admin + Dispatch roles, with sub-sections for the full school operations workflow.
 
-## Seed Demo Data for Testing
+### Navigation
 
-### What we'll insert
+- Add **Admin** entry to `AppSidebar` (icon: `Shield`), visible only to admin/dispatch.
+- New `/admin` route in `App.tsx` rendering `AdminPage` with tabbed layout.
 
-Since profiles doesn't have a foreign key constraint to auth.users (based on the schema), we can insert demo profiles directly. The two real users (Adrian Perez - admin, Andrian Abel - student) will be supplemented with demo people.
+### Sub-tabs
 
-### Data to seed
+1. **Admissions** — full pipeline
+2. **Subscriptions** — plan management (payment-stub)
+3. **Documents** — school library + per-member compliance
+4. **Announcements** — broadcast posts
+5. **Audit Log** — admin action history
+6. **Settings** — school info, branding, defaults
 
-**1. Courses** (3 rows)
-- Part 141 – Private Pilot
-- Part 141 – Instrument Rating  
-- Part 61 Instruction
+---
 
-**2. Demo Profiles + Roles** (10 new people)
-- 4 Instructors: Atlee Julian Eng, Gabriela Murcia, Paul Lewis, Erick Valdez Quinones
-- 4 Students: Marcus Johnson, Emily Chen, David Rodriguez, Sarah Williams
-- 1 Dispatcher: Maria Gonzalez
-- 1 Maintenance: Oscar Delgado (dispatch role)
+### 1. Admissions (full pipeline)
 
-**3. Course Enrollments** (5 rows)
-- Andrian Abel → Private Pilot (enrolled)
-- Marcus Johnson → Private Pilot (enrolled)
-- Emily Chen → Private Pilot (enrolled)
-- David Rodriguez → Instrument Rating (enrolled)
-- Sarah Williams → Part 61 (enrolled)
+Workflow: `new` → `under_review` → `accepted` / `rejected` → `invited` (auto-creates member_invite).
 
-**4. Flight Reservations** (8 rows)
-- Mix of today and upcoming days, various aircraft/instructor/student combos, some confirmed, some pending
-- Different flight types (private, instrument, part61, solo, rental)
+- **Public application form** at `/apply` (no auth) — collects name, email, phone, course interest, notes, file uploads (transcripts, ID, medical).
+- **Admin inbox** — list of applications with status filters, detail drawer showing answers + uploaded docs, status transitions, internal notes.
+- **Accept action** auto-creates a `member_invites` row using existing invite system, links applicant → eventual user.
 
-**5. Completed Flight Sessions** (6 rows)
-- Past sessions with hobbs/tach data filled in, linked to instructors and students
-- Realistic hobbs values (e.g., 1234.5 → 1236.2) and tach values
-- Flight instruction and ground instruction hours populated
+**New tables:**
+- `applications` (full_name, email, phone, course_interest, status, notes, internal_notes, reviewed_by, reviewed_at)
+- `application_documents` (application_id, name, file_path)
+- New storage bucket `application-documents` (private, admin-readable)
 
-**6. Account Transactions** (12 rows)
-- Payments added (credits) for students: $2000, $1500, etc.
-- Flight charges (debits) for completed sessions
-- Ground instruction charges
-- Gives students realistic balances
+### 2. Subscriptions (stub)
 
-### Implementation
+Plans like "Hangar Access $200/mo", "Sim Bay $50/mo".
 
-Use the insert tool to run all INSERT statements across the tables. Generate deterministic UUIDs for the demo profiles so we can reference them in other tables.
+- Admin defines plans (name, price, interval, description).
+- Assign plan to a member → creates subscription row with status `active` / `past_due` / `cancelled` and renewal date.
+- "Send payment link" button present but disabled with tooltip "Payments coming soon" — wired to a placeholder handler.
+- Member dashboard gets a small "My Subscriptions" card showing active plans.
 
-### Files to modify
+**New tables:**
+- `subscription_plans` (name, description, price, interval, active)
+- `member_subscriptions` (user_id, plan_id, status, started_at, current_period_end, cancelled_at)
 
-None — this is data-only, inserted via the database insert tool.
+### 3. Documents (both)
 
+Two panes inside the Documents tab:
+
+**a. School Library** — shared docs visible to all authenticated users.
+- Categories (handbook, SOP, form, policy, other).
+- Optional expiration date with status badge (valid / expiring soon / expired).
+- Upload, download, replace, delete (admin only).
+
+**b. Compliance Tracker** — per-member required documents.
+- Define document types (Medical Cert, Pilot License, Insurance, Photo ID, etc.) with default validity periods.
+- Per-member matrix: who's missing what, who's expiring within 30/60/90 days.
+- Click cell → upload/replace doc for that member (reuses existing `user_documents` bucket).
+- Compliance summary card on member detail page.
+
+**New tables:**
+- `school_documents` (name, category, file_path, expires_at, uploaded_by)
+- `document_types` (name, description, default_validity_days, required)
+- `user_documents` — extend with `document_type_id`, `expires_at`, `issued_at` columns
+- New storage bucket `school-documents` (private, all authenticated read)
+
+### 4. Announcements
+
+- Admin creates posts (title, body, audience: all / students / instructors / dispatch, pinned, expires_at).
+- Shown as a card on Dashboard for relevant audience.
+- Mark-as-read tracked per user.
+
+**New tables:**
+- `announcements` (title, body, audience, pinned, expires_at, created_by)
+- `announcement_reads` (announcement_id, user_id, read_at)
+
+### 5. Audit Log
+
+- Captures: invite sent, role changed, application status change, document uploaded/deleted, subscription created, plan edited, announcement posted, settings changed.
+- Read-only filterable table (actor, action, target, timestamp, metadata JSON).
+- Populated via DB triggers on the relevant tables (cleanest, no app-code coupling).
+
+**New table:**
+- `audit_log` (actor_id, action, entity_type, entity_id, metadata jsonb, created_at)
+
+### 6. School Settings
+
+- School info: name, address, phone, logo (upload).
+- Branding: primary brand color (stored, not yet wired into theme).
+- Defaults: default course for new admissions, default instructor rate, default ground rate.
+- Reuses existing `schools` table — extend with `address`, `phone`, `logo_url`, `brand_color`, `default_course_id`, `default_instructor_rate`, `default_ground_rate`.
+
+---
+
+### RLS pattern (all new tables)
+
+- Admin + Dispatch: full management access via `has_role`.
+- Authenticated read on `announcements`, `school_documents`, `subscription_plans`.
+- Owner read on `member_subscriptions` (own row) + admin/dispatch read all.
+- `applications` insert allowed for anon (public form); read/update admin-only.
+- `audit_log` insert via triggers only (no direct client writes), admin read.
+
+### File structure
+
+```text
+src/pages/
+  AdminPage.tsx              (tabbed shell)
+  ApplyPage.tsx              (public application form)
+src/components/admin/
+  AdmissionsTab.tsx
+  ApplicationDetailDrawer.tsx
+  SubscriptionsTab.tsx
+  PlanFormDialog.tsx
+  AssignPlanDialog.tsx
+  DocumentsTab.tsx
+    SchoolLibraryPane.tsx
+    ComplianceTrackerPane.tsx
+  AnnouncementsTab.tsx
+  AuditLogTab.tsx
+  SettingsTab.tsx
+src/components/dashboard/
+  AnnouncementsCard.tsx      (new, shown on DashboardPage)
+  MySubscriptionsCard.tsx    (new)
+src/hooks/
+  useAdminGuard.ts           (redirects non-admin/dispatch)
+  useApplications.ts
+  useSubscriptions.ts
+  useSchoolDocuments.ts
+  useComplianceMatrix.ts
+  useAnnouncements.ts
+  useAuditLog.ts
+  useSchoolSettings.ts
+```
+
+### Order of implementation
+
+1. Migrations: all new tables, columns, buckets, RLS, audit triggers.
+2. Admin shell + sidebar entry + route guard.
+3. Documents tab (highest immediate value).
+4. Admissions tab + public `/apply` page.
+5. Announcements + dashboard card.
+6. Subscriptions (stubbed payment).
+7. Settings.
+8. Audit log viewer.
+
+### Notes
+
+- Public signup stays disabled — admissions accept = generates invite, preserving invite-only rule.
+- Payment integration is intentionally deferred; stub buttons make Stripe/Paddle wiring a one-file change later.
+- All UI follows existing light-mode design system, Lucide icons, no emojis.
