@@ -27,9 +27,13 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
+  const { user } = useCurrentUser();
 
   const isActive = (url: string) =>
     url === '/schedule' ? location.pathname === '/schedule' : location.pathname.startsWith(url);
+
+  // When auth is disabled (no user), show everything for testing.
+  const visibleItems = NAV_ITEMS.filter((item) => !item.roles || !user || item.roles.includes(user.role || ''));
 
   return (
     <Sidebar collapsible="icon">
@@ -37,7 +41,7 @@ export function AppSidebar() {
         <SidebarGroup className="flex-1 flex flex-col">
           <SidebarGroupContent className="flex-1 flex flex-col">
             <SidebarMenu className="flex flex-col justify-evenly h-full">
-              {NAV_ITEMS.map((item) => (
+              {visibleItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
