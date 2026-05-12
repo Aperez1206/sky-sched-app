@@ -1,4 +1,4 @@
-import { CalendarDays, Users, Plane, CreditCard, Radio, LayoutDashboard } from 'lucide-react';
+import { CalendarDays, Users, Plane, CreditCard, Radio, LayoutDashboard, Shield } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 const NAV_ITEMS = [
   { title: 'Schedule', url: '/schedule', icon: CalendarDays },
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { title: 'Aircraft', url: '/aircraft', icon: Plane },
   { title: 'Billing', url: '/billing', icon: CreditCard },
   { title: 'Dispatch', url: '/dispatch', icon: Radio },
+  { title: 'Admin', url: '/admin', icon: Shield, roles: ['admin', 'dispatch'] as string[] },
 ];
 
 export function AppSidebar() {
