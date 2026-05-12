@@ -14,6 +14,8 @@ import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import AdminPage from "./pages/AdminPage";
+import ApplyPage from "./pages/ApplyPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +32,7 @@ const App = () => (
           {/* Auth disabled */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/apply" element={<ApplyPage />} />
 
           {/* Protected routes */}
           <Route element={<AppLayout />}>
