@@ -52,6 +52,175 @@ export type Database = {
           },
         ]
       }
+      announcement_reads: {
+        Row: {
+          announcement_id: string
+          id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          id?: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          audience: string
+          body: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          pinned: boolean
+          title: string
+        }
+        Insert: {
+          audience?: string
+          body: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          pinned?: boolean
+          title: string
+        }
+        Update: {
+          audience?: string
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          pinned?: boolean
+          title?: string
+        }
+        Relationships: []
+      }
+      application_documents: {
+        Row: {
+          application_id: string
+          created_at: string
+          file_path: string
+          id: string
+          name: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          file_path: string
+          id?: string
+          name: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          file_path?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_documents_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      applications: {
+        Row: {
+          course_interest: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          internal_notes: string | null
+          notes: string | null
+          phone: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          course_interest?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          internal_notes?: string | null
+          notes?: string | null
+          phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          course_interest?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          internal_notes?: string | null
+          notes?: string | null
+          phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
       course_enrollments: {
         Row: {
           course_id: string
@@ -112,6 +281,33 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      document_types: {
+        Row: {
+          created_at: string
+          default_validity_days: number | null
+          description: string | null
+          id: string
+          name: string
+          required: boolean
+        }
+        Insert: {
+          created_at?: string
+          default_validity_days?: number | null
+          description?: string | null
+          id?: string
+          name: string
+          required?: boolean
+        }
+        Update: {
+          created_at?: string
+          default_validity_days?: number | null
+          description?: string | null
+          id?: string
+          name?: string
+          required?: boolean
         }
         Relationships: []
       }
@@ -325,6 +521,47 @@ export type Database = {
           },
         ]
       }
+      member_subscriptions: {
+        Row: {
+          cancelled_at: string | null
+          created_at: string
+          current_period_end: string | null
+          id: string
+          plan_id: string
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          plan_id: string
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          plan_id?: string
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           course_id: string | null
@@ -389,53 +626,150 @@ export type Database = {
           },
         ]
       }
-      schools: {
+      school_documents: {
         Row: {
-          code: string
-          created_at: string | null
+          category: string
+          created_at: string
+          expires_at: string | null
+          file_path: string
           id: string
           name: string
+          uploaded_by: string | null
         }
         Insert: {
-          code: string
-          created_at?: string | null
+          category?: string
+          created_at?: string
+          expires_at?: string | null
+          file_path: string
           id?: string
           name: string
+          uploaded_by?: string | null
         }
         Update: {
-          code?: string
-          created_at?: string | null
+          category?: string
+          created_at?: string
+          expires_at?: string | null
+          file_path?: string
           id?: string
           name?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      schools: {
+        Row: {
+          address: string | null
+          brand_color: string | null
+          code: string
+          created_at: string | null
+          default_course_id: string | null
+          default_ground_rate: number | null
+          default_instructor_rate: number | null
+          id: string
+          logo_url: string | null
+          name: string
+          phone: string | null
+        }
+        Insert: {
+          address?: string | null
+          brand_color?: string | null
+          code: string
+          created_at?: string | null
+          default_course_id?: string | null
+          default_ground_rate?: number | null
+          default_instructor_rate?: number | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+        }
+        Update: {
+          address?: string | null
+          brand_color?: string | null
+          code?: string
+          created_at?: string | null
+          default_course_id?: string | null
+          default_ground_rate?: number | null
+          default_instructor_rate?: number | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
+      subscription_plans: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          interval: string
+          name: string
+          price: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          interval?: string
+          name: string
+          price?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          interval?: string
+          name?: string
+          price?: number
         }
         Relationships: []
       }
       user_documents: {
         Row: {
           created_at: string | null
+          document_type_id: string | null
+          expires_at: string | null
           file_path: string
           id: string
+          issued_at: string | null
           name: string
           uploaded_by: string
           user_id: string
         }
         Insert: {
           created_at?: string | null
+          document_type_id?: string | null
+          expires_at?: string | null
           file_path: string
           id?: string
+          issued_at?: string | null
           name: string
           uploaded_by: string
           user_id: string
         }
         Update: {
           created_at?: string | null
+          document_type_id?: string | null
+          expires_at?: string | null
           file_path?: string
           id?: string
+          issued_at?: string | null
           name?: string
           uploaded_by?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_documents_document_type_id_fkey"
+            columns: ["document_type_id"]
+            isOneToOne: false
+            referencedRelation: "document_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_documents_uploaded_by_fkey"
             columns: ["uploaded_by"]
