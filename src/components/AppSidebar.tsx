@@ -1,4 +1,4 @@
-import { CalendarDays, Users, Plane, CreditCard, Radio, LayoutDashboard, Shield } from 'lucide-react';
+import { CalendarDays, Users, Plane, CreditCard, Radio, LayoutDashboard, Shield, Wrench } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import {
