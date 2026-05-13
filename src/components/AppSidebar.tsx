@@ -1,4 +1,4 @@
-import { CalendarDays, Users, Plane, CreditCard, Radio, LayoutDashboard, Shield } from 'lucide-react';
+import { CalendarDays, Users, Plane, CreditCard, Radio, LayoutDashboard, Shield, Wrench } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import {
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { title: 'Billing', url: '/billing', icon: CreditCard },
   { title: 'Dispatch', url: '/dispatch', icon: Radio },
   { title: 'Admin', url: '/admin', icon: Shield, roles: ['admin', 'dispatch'] as string[] },
+  { title: 'Maintenance', url: '/maintenance', icon: Wrench, roles: ['admin', 'maintenance'] as string[] },
 ];
 
 export function AppSidebar() {

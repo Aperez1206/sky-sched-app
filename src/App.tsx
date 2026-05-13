@@ -15,6 +15,7 @@ import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import AdminPage from "./pages/AdminPage";
+import MaintenancePage from "./pages/MaintenancePage";
 import ApplyPage from "./pages/ApplyPage";
 import NotFound from "./pages/NotFound";
 
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/billing" element={<BillingPage />} />
             <Route path="/dispatch" element={<DispatchPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/maintenance" element={<MaintenancePage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
