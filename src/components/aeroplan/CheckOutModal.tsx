@@ -8,6 +8,8 @@ import { getLastTimes, createCheckOut } from '@/hooks/useFlightSessions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { AlertTriangle } from 'lucide-react';
+import { useAircraftMaintenance, useInspections } from '@/hooks/useMaintenanceData';
 
 interface Props {
   open: boolean;
@@ -22,11 +24,30 @@ export default function CheckOutModal({ open, onClose, booking, onComplete }: Pr
   const [lastHobbs, setLastHobbs] = useState<number | null>(null);
   const [lastTach, setLastTach] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [ackInspection, setAckInspection] = useState(false);
+
+  const { data: fleet } = useAircraftMaintenance();
+  const { data: inspections } = useInspections(booking?.aircraftTail);
+  const aircraft = fleet?.find(a => a.aircraft_tail === booking?.aircraftTail);
+  const currentHobbs = aircraft?.current_hobbs ?? null;
+
+  const inspectionAlerts = (inspections ?? []).map(insp => {
+    const hoursLeft = insp.due_hobbs != null && currentHobbs != null ? insp.due_hobbs - currentHobbs : null;
+    const daysLeft = insp.due_date ? Math.ceil((new Date(insp.due_date).getTime() - Date.now()) / 86400000) : null;
+    const overdue = (hoursLeft != null && hoursLeft <= 0) || (daysLeft != null && daysLeft < 0);
+    const within10h = hoursLeft != null && hoursLeft <= 10 && hoursLeft > 0;
+    const within7d = daysLeft != null && daysLeft <= 7 && daysLeft >= 0;
+    return { insp, hoursLeft, daysLeft, overdue, within10h, within7d, flagged: overdue || within10h || within7d };
+  }).filter(a => a.flagged);
+
+  const hasOverdue = inspectionAlerts.some(a => a.overdue);
+  const needsAck = inspectionAlerts.length > 0;
 
   useEffect(() => {
     if (open && booking) {
       setWeatherOk(false);
       setWbOk(false);
+      setAckInspection(false);
       getLastTimes(booking.aircraftTail).then(result => {
         setLastHobbs(result?.hobbs_out ?? null);
         setLastTach(result?.tach_out ?? null);
@@ -91,6 +112,30 @@ export default function CheckOutModal({ open, onClose, booking, onComplete }: Pr
             </div>
           </div>
 
+          {inspectionAlerts.length > 0 && (
+            <div className={`rounded-xl border p-3 space-y-2 ${hasOverdue ? 'border-red-300 bg-red-50' : 'border-orange-300 bg-orange-50'}`}>
+              <div className={`flex items-center gap-2 font-semibold text-sm ${hasOverdue ? 'text-red-700' : 'text-orange-700'}`}>
+                <AlertTriangle className="h-4 w-4" />
+                {hasOverdue ? 'Inspection overdue — do not release' : 'Inspection due soon'}
+              </div>
+              <ul className="text-xs space-y-1 text-slate-700">
+                {inspectionAlerts.map(a => (
+                  <li key={a.insp.id}>
+                    <span className="font-medium">{a.insp.inspection_type}:</span>{' '}
+                    {a.hoursLeft != null && <span>{a.hoursLeft.toFixed(1)} hrs left</span>}
+                    {a.hoursLeft != null && a.daysLeft != null && ' · '}
+                    {a.daysLeft != null && <span>{a.daysLeft} days left</span>}
+                    {a.overdue && <span className="ml-1 font-semibold text-red-700">(OVERDUE)</span>}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex items-center gap-2 pt-1">
+                <Checkbox id="ack" checked={ackInspection} onCheckedChange={v => setAckInspection(!!v)} />
+                <Label htmlFor="ack" className="text-xs">Dispatch acknowledges inspection status and authorizes release</Label>
+              </div>
+            </div>
+          )}
+
           <div className="border-t pt-3 space-y-3">
             <div className="flex items-center gap-2">
               <Checkbox id="weather" checked={weatherOk} onCheckedChange={v => setWeatherOk(!!v)} />
@@ -105,7 +150,7 @@ export default function CheckOutModal({ open, onClose, booking, onComplete }: Pr
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleCheckOut} disabled={!weatherOk || !wbOk || loading}>
+          <Button onClick={handleCheckOut} disabled={!weatherOk || !wbOk || loading || (needsAck && !ackInspection)}>
             {loading ? 'Checking out…' : 'Check Out'}
           </Button>
         </DialogFooter>

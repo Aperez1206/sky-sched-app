@@ -245,3 +245,71 @@ export function useUpsertInventoryPart() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory_parts'] }),
   });
 }
+
+export interface AircraftInspection {
+  id: string;
+  aircraft_tail: string;
+  inspection_type: string;
+  last_completed_date: string | null;
+  last_completed_hobbs: number | null;
+  due_date: string | null;
+  due_hobbs: number | null;
+  interval_hours: number | null;
+  interval_months: number | null;
+  notes: string | null;
+}
+
+export function useInspections(aircraftTail?: string) {
+  return useQuery({
+    queryKey: ['aircraft_inspections', aircraftTail ?? 'all'],
+    queryFn: async () => {
+      let q = supabase.from('aircraft_inspections').select('*').order('aircraft_tail').order('inspection_type');
+      if (aircraftTail) q = q.eq('aircraft_tail', aircraftTail);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data as AircraftInspection[];
+    },
+  });
+}
+
+export function useUpsertInspection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: Partial<AircraftInspection> & { aircraft_tail: string; inspection_type: string }) => {
+      if (input.id) {
+        const { error } = await supabase.from('aircraft_inspections').update(input).eq('id', input.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('aircraft_inspections').insert(input);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['aircraft_inspections'] }),
+  });
+}
+
+export function useDeleteInspection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('aircraft_inspections').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['aircraft_inspections'] }),
+  });
+}
+
+/** Returns inspections within `hoursThreshold` of being due for the given aircraft */
+export function useUpcomingInspectionsForAircraft(aircraftTail: string | null | undefined, currentHobbs: number | null | undefined, hoursThreshold = 10) {
+  const { data: inspections } = useInspections(aircraftTail ?? undefined);
+  if (!aircraftTail || !inspections) return [];
+  return inspections.filter((insp) => {
+    let hoursLeft: number | null = null;
+    if (insp.due_hobbs != null && currentHobbs != null) hoursLeft = insp.due_hobbs - currentHobbs;
+    let daysLeft: number | null = null;
+    if (insp.due_date) daysLeft = Math.ceil((new Date(insp.due_date).getTime() - Date.now()) / 86400000);
+    const hoursWarn = hoursLeft != null && hoursLeft <= hoursThreshold;
+    const daysWarn = daysLeft != null && daysLeft <= 7;
+    return hoursWarn || daysWarn;
+  });
+}
