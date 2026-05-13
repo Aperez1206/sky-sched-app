@@ -624,6 +624,161 @@ function ReportsSection() {
   );
 }
 
+function inspectionStatus(insp: AircraftInspection, currentHobbs: number | null) {
+  const hoursLeft = insp.due_hobbs != null && currentHobbs != null ? insp.due_hobbs - currentHobbs : null;
+  const daysLeft = insp.due_date ? Math.ceil((new Date(insp.due_date).getTime() - Date.now()) / 86400000) : null;
+  const overdue = (hoursLeft != null && hoursLeft <= 0) || (daysLeft != null && daysLeft < 0);
+  const warning = (hoursLeft != null && hoursLeft <= 10) || (daysLeft != null && daysLeft <= 7);
+  return { hoursLeft, daysLeft, overdue, warning };
+}
+
+function InspectionsSection() {
+  const { data: fleet } = useAircraftMaintenance();
+  const { data: inspections } = useInspections();
+  const upsert = useUpsertInspection();
+  const del = useDeleteInspection();
+
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    aircraft_tail: '', inspection_type: '', last_completed_date: '', last_completed_hobbs: '',
+    due_date: '', due_hobbs: '', interval_hours: '', interval_months: '',
+  });
+
+  const hobbsByTail = useMemo(() => {
+    const m = new Map<string, number | null>();
+    fleet?.forEach(a => m.set(a.aircraft_tail, a.current_hobbs));
+    return m;
+  }, [fleet]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, AircraftInspection[]>();
+    inspections?.forEach(i => {
+      const arr = map.get(i.aircraft_tail) ?? [];
+      arr.push(i);
+      map.set(i.aircraft_tail, arr);
+    });
+    return map;
+  }, [inspections]);
+
+  const handleSave = () => {
+    if (!form.aircraft_tail || !form.inspection_type) {
+      toast.error('Aircraft and inspection type required'); return;
+    }
+    upsert.mutate({
+      aircraft_tail: form.aircraft_tail,
+      inspection_type: form.inspection_type,
+      last_completed_date: form.last_completed_date || null,
+      last_completed_hobbs: form.last_completed_hobbs ? Number(form.last_completed_hobbs) : null,
+      due_date: form.due_date || null,
+      due_hobbs: form.due_hobbs ? Number(form.due_hobbs) : null,
+      interval_hours: form.interval_hours ? Number(form.interval_hours) : null,
+      interval_months: form.interval_months ? Number(form.interval_months) : null,
+    }, {
+      onSuccess: () => {
+        toast.success('Inspection saved');
+        setOpen(false);
+        setForm({ aircraft_tail: '', inspection_type: '', last_completed_date: '', last_completed_hobbs: '', due_date: '', due_hobbs: '', interval_hours: '', interval_months: '' });
+      },
+      onError: (e: Error) => toast.error(e.message),
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button className="rounded-xl"><Plus className="h-4 w-4 mr-2" /> Add Inspection</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader><DialogTitle>Add Inspection</DialogTitle></DialogHeader>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Aircraft</Label>
+                <Select value={form.aircraft_tail} onValueChange={(v) => setForm({ ...form, aircraft_tail: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    {fleet?.map(a => <SelectItem key={a.aircraft_tail} value={a.aircraft_tail}>{a.aircraft_tail}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Inspection Type</Label>
+                <Input value={form.inspection_type} onChange={(e) => setForm({ ...form, inspection_type: e.target.value })} placeholder="e.g. Annual, 100 Hour" />
+              </div>
+              <div><Label>Last Completed Date</Label><Input type="date" value={form.last_completed_date} onChange={(e) => setForm({ ...form, last_completed_date: e.target.value })} /></div>
+              <div><Label>Last Completed Hobbs</Label><Input type="number" step="0.1" value={form.last_completed_hobbs} onChange={(e) => setForm({ ...form, last_completed_hobbs: e.target.value })} /></div>
+              <div><Label>Due Date</Label><Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div>
+              <div><Label>Due Hobbs</Label><Input type="number" step="0.1" value={form.due_hobbs} onChange={(e) => setForm({ ...form, due_hobbs: e.target.value })} /></div>
+              <div><Label>Interval (hours)</Label><Input type="number" value={form.interval_hours} onChange={(e) => setForm({ ...form, interval_hours: e.target.value })} /></div>
+              <div><Label>Interval (months)</Label><Input type="number" value={form.interval_months} onChange={(e) => setForm({ ...form, interval_months: e.target.value })} /></div>
+            </div>
+            <DialogFooter><Button onClick={handleSave}>Save</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {Array.from(grouped.entries()).map(([tail, list]) => {
+        const hobbs = hobbsByTail.get(tail) ?? null;
+        return (
+          <Card key={tail} className="rounded-2xl border-slate-200">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-base">{tail}</CardTitle>
+              <span className="text-xs text-muted-foreground font-mono">Hobbs {hobbs?.toFixed(1) ?? '—'}</span>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Inspection</TableHead>
+                    <TableHead>Last Completed</TableHead>
+                    <TableHead>Next Due</TableHead>
+                    <TableHead className="text-right">Hours Left</TableHead>
+                    <TableHead className="text-right">Days Left</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {list.map(insp => {
+                    const s = inspectionStatus(insp, hobbs);
+                    return (
+                      <TableRow key={insp.id}>
+                        <TableCell className="font-medium">{insp.inspection_type}</TableCell>
+                        <TableCell>
+                          {insp.last_completed_date ?? '—'}
+                          {insp.last_completed_hobbs != null && <span className="text-muted-foreground"> · {insp.last_completed_hobbs.toFixed(1)}h</span>}
+                        </TableCell>
+                        <TableCell>
+                          {insp.due_date ?? '—'}
+                          {insp.due_hobbs != null && <span className="text-muted-foreground"> · {insp.due_hobbs.toFixed(1)}h</span>}
+                        </TableCell>
+                        <TableCell className="text-right font-mono tabular-nums">{s.hoursLeft != null ? s.hoursLeft.toFixed(1) : '—'}</TableCell>
+                        <TableCell className="text-right font-mono tabular-nums">{s.daysLeft ?? '—'}</TableCell>
+                        <TableCell>
+                          {s.overdue ? <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">Overdue</Badge>
+                            : s.warning ? <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200">Due Soon</Badge>
+                            : <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">Current</Badge>}
+                        </TableCell>
+                        <TableCell>
+                          <Button size="icon" variant="ghost" onClick={() => del.mutate(insp.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
+      })}
+      {grouped.size === 0 && <Card className="rounded-2xl border-slate-200"><CardContent className="py-8 text-center text-muted-foreground">No inspections recorded yet.</CardContent></Card>}
+    </div>
+  );
+}
+
 export default function MaintenancePage() {
   const [section, setSection] = useState<Section>('dashboard');
   const { user, loading } = useCurrentUser();
