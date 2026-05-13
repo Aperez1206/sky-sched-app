@@ -101,10 +101,10 @@ export default function AddMemberModal({ open, onOpenChange, onSuccess }: AddMem
           {role === 'student' && courses.length > 0 && (
             <div className="space-y-1.5">
               <Label>Course (optional)</Label>
-              <Select value={courseId} onValueChange={setCourseId}>
+              <Select value={courseId || 'none'} onValueChange={(v) => setCourseId(v === 'none' ? '' : v)}>
                 <SelectTrigger><SelectValue placeholder="No course" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {courses.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
