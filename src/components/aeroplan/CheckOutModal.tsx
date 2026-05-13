@@ -47,6 +47,7 @@ export default function CheckOutModal({ open, onClose, booking, onComplete }: Pr
     if (open && booking) {
       setWeatherOk(false);
       setWbOk(false);
+      setAckInspection(false);
       getLastTimes(booking.aircraftTail).then(result => {
         setLastHobbs(result?.hobbs_out ?? null);
         setLastTach(result?.tach_out ?? null);
