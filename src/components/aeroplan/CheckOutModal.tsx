@@ -24,6 +24,24 @@ export default function CheckOutModal({ open, onClose, booking, onComplete }: Pr
   const [lastHobbs, setLastHobbs] = useState<number | null>(null);
   const [lastTach, setLastTach] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [ackInspection, setAckInspection] = useState(false);
+
+  const { data: fleet } = useAircraftMaintenance();
+  const { data: inspections } = useInspections(booking?.aircraftTail);
+  const aircraft = fleet?.find(a => a.aircraft_tail === booking?.aircraftTail);
+  const currentHobbs = aircraft?.current_hobbs ?? null;
+
+  const inspectionAlerts = (inspections ?? []).map(insp => {
+    const hoursLeft = insp.due_hobbs != null && currentHobbs != null ? insp.due_hobbs - currentHobbs : null;
+    const daysLeft = insp.due_date ? Math.ceil((new Date(insp.due_date).getTime() - Date.now()) / 86400000) : null;
+    const overdue = (hoursLeft != null && hoursLeft <= 0) || (daysLeft != null && daysLeft < 0);
+    const within10h = hoursLeft != null && hoursLeft <= 10 && hoursLeft > 0;
+    const within7d = daysLeft != null && daysLeft <= 7 && daysLeft >= 0;
+    return { insp, hoursLeft, daysLeft, overdue, within10h, within7d, flagged: overdue || within10h || within7d };
+  }).filter(a => a.flagged);
+
+  const hasOverdue = inspectionAlerts.some(a => a.overdue);
+  const needsAck = inspectionAlerts.length > 0;
 
   useEffect(() => {
     if (open && booking) {
