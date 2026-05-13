@@ -112,6 +112,30 @@ export default function CheckOutModal({ open, onClose, booking, onComplete }: Pr
             </div>
           </div>
 
+          {inspectionAlerts.length > 0 && (
+            <div className={`rounded-xl border p-3 space-y-2 ${hasOverdue ? 'border-red-300 bg-red-50' : 'border-orange-300 bg-orange-50'}`}>
+              <div className={`flex items-center gap-2 font-semibold text-sm ${hasOverdue ? 'text-red-700' : 'text-orange-700'}`}>
+                <AlertTriangle className="h-4 w-4" />
+                {hasOverdue ? 'Inspection overdue — do not release' : 'Inspection due soon'}
+              </div>
+              <ul className="text-xs space-y-1 text-slate-700">
+                {inspectionAlerts.map(a => (
+                  <li key={a.insp.id}>
+                    <span className="font-medium">{a.insp.inspection_type}:</span>{' '}
+                    {a.hoursLeft != null && <span>{a.hoursLeft.toFixed(1)} hrs left</span>}
+                    {a.hoursLeft != null && a.daysLeft != null && ' · '}
+                    {a.daysLeft != null && <span>{a.daysLeft} days left</span>}
+                    {a.overdue && <span className="ml-1 font-semibold text-red-700">(OVERDUE)</span>}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex items-center gap-2 pt-1">
+                <Checkbox id="ack" checked={ackInspection} onCheckedChange={v => setAckInspection(!!v)} />
+                <Label htmlFor="ack" className="text-xs">Dispatch acknowledges inspection status and authorizes release</Label>
+              </div>
+            </div>
+          )}
+
           <div className="border-t pt-3 space-y-3">
             <div className="flex items-center gap-2">
               <Checkbox id="weather" checked={weatherOk} onCheckedChange={v => setWeatherOk(!!v)} />
@@ -126,7 +150,7 @@ export default function CheckOutModal({ open, onClose, booking, onComplete }: Pr
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleCheckOut} disabled={!weatherOk || !wbOk || loading}>
+          <Button onClick={handleCheckOut} disabled={!weatherOk || !wbOk || loading || (needsAck && !ackInspection)}>
             {loading ? 'Checking out…' : 'Check Out'}
           </Button>
         </DialogFooter>
