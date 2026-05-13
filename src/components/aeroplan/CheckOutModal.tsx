@@ -8,6 +8,8 @@ import { getLastTimes, createCheckOut } from '@/hooks/useFlightSessions';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { AlertTriangle } from 'lucide-react';
+import { useAircraftMaintenance, useInspections } from '@/hooks/useMaintenanceData';
 
 interface Props {
   open: boolean;
