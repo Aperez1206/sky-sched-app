@@ -52,6 +52,48 @@ export type Database = {
           },
         ]
       }
+      aircraft_maintenance: {
+        Row: {
+          aircraft_tail: string
+          airworthy_status: string
+          created_at: string
+          current_hobbs: number | null
+          current_tach: number | null
+          id: string
+          next_inspection_date: string | null
+          next_inspection_hobbs: number | null
+          notes: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          aircraft_tail: string
+          airworthy_status?: string
+          created_at?: string
+          current_hobbs?: number | null
+          current_tach?: number | null
+          id?: string
+          next_inspection_date?: string | null
+          next_inspection_hobbs?: number | null
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          aircraft_tail?: string
+          airworthy_status?: string
+          created_at?: string
+          current_hobbs?: number | null
+          current_tach?: number | null
+          id?: string
+          next_inspection_date?: string | null
+          next_inspection_hobbs?: number | null
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       announcement_reads: {
         Row: {
           announcement_id: string
@@ -480,6 +522,89 @@ export type Database = {
           },
         ]
       }
+      inventory_parts: {
+        Row: {
+          condition: string
+          created_at: string
+          description: string
+          expires_at: string | null
+          id: string
+          location: string | null
+          min_quantity: number
+          part_number: string
+          quantity: number
+          unit_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          condition?: string
+          created_at?: string
+          description: string
+          expires_at?: string | null
+          id?: string
+          location?: string | null
+          min_quantity?: number
+          part_number: string
+          quantity?: number
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          condition?: string
+          created_at?: string
+          description?: string
+          expires_at?: string | null
+          id?: string
+          location?: string | null
+          min_quantity?: number
+          part_number?: string
+          quantity?: number
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mechanic_time_logs: {
+        Row: {
+          clock_in: string
+          clock_out: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          task_label: string | null
+          user_id: string
+          work_order_id: string | null
+        }
+        Insert: {
+          clock_in?: string
+          clock_out?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          task_label?: string | null
+          user_id: string
+          work_order_id?: string | null
+        }
+        Update: {
+          clock_in?: string
+          clock_out?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          task_label?: string | null
+          user_id?: string
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mechanic_time_logs_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_invites: {
         Row: {
           course_id: string | null
@@ -801,6 +926,104 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      work_order_parts: {
+        Row: {
+          action: string
+          description: string | null
+          id: string
+          meter_hobbs: number | null
+          meter_tach: number | null
+          part_number: string
+          performed_at: string
+          performed_by: string | null
+          serial_number: string | null
+          work_order_id: string
+        }
+        Insert: {
+          action: string
+          description?: string | null
+          id?: string
+          meter_hobbs?: number | null
+          meter_tach?: number | null
+          part_number: string
+          performed_at?: string
+          performed_by?: string | null
+          serial_number?: string | null
+          work_order_id: string
+        }
+        Update: {
+          action?: string
+          description?: string | null
+          id?: string
+          meter_hobbs?: number | null
+          meter_tach?: number | null
+          part_number?: string
+          performed_at?: string
+          performed_by?: string | null
+          serial_number?: string | null
+          work_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_parts_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "work_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_orders: {
+        Row: {
+          aircraft_tail: string
+          assigned_to: string | null
+          closed_at: string | null
+          created_at: string
+          description: string | null
+          hobbs_at_close: number | null
+          hobbs_at_open: number | null
+          id: string
+          opened_at: string
+          opened_by: string | null
+          status: string
+          title: string
+          updated_at: string
+          wo_number: string
+        }
+        Insert: {
+          aircraft_tail: string
+          assigned_to?: string | null
+          closed_at?: string | null
+          created_at?: string
+          description?: string | null
+          hobbs_at_close?: number | null
+          hobbs_at_open?: number | null
+          id?: string
+          opened_at?: string
+          opened_by?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          wo_number: string
+        }
+        Update: {
+          aircraft_tail?: string
+          assigned_to?: string | null
+          closed_at?: string | null
+          created_at?: string
+          description?: string | null
+          hobbs_at_close?: number | null
+          hobbs_at_open?: number | null
+          id?: string
+          opened_at?: string
+          opened_by?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          wo_number?: string
         }
         Relationships: []
       }
