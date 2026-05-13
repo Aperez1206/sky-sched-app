@@ -52,6 +52,51 @@ export type Database = {
           },
         ]
       }
+      aircraft_inspections: {
+        Row: {
+          aircraft_tail: string
+          created_at: string
+          due_date: string | null
+          due_hobbs: number | null
+          id: string
+          inspection_type: string
+          interval_hours: number | null
+          interval_months: number | null
+          last_completed_date: string | null
+          last_completed_hobbs: number | null
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          aircraft_tail: string
+          created_at?: string
+          due_date?: string | null
+          due_hobbs?: number | null
+          id?: string
+          inspection_type: string
+          interval_hours?: number | null
+          interval_months?: number | null
+          last_completed_date?: string | null
+          last_completed_hobbs?: number | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aircraft_tail?: string
+          created_at?: string
+          due_date?: string | null
+          due_hobbs?: number | null
+          id?: string
+          inspection_type?: string
+          interval_hours?: number | null
+          interval_months?: number | null
+          last_completed_date?: string | null
+          last_completed_hobbs?: number | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       aircraft_maintenance: {
         Row: {
           aircraft_tail: string
