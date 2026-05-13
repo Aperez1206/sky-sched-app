@@ -14,16 +14,18 @@ import {
   useAircraftMaintenance, useWorkOrders, useWorkOrderParts, useInventory,
   useActiveTimeLog, useTimeLogs, useClockIn, useClockOut,
   useCreateWorkOrder, useUpdateWorkOrderStatus, useAddWorkOrderPart, useUpsertInventoryPart,
-  type AircraftMaintenance, type WorkOrder,
+  useInspections, useUpsertInspection, useDeleteInspection,
+  type AircraftMaintenance, type WorkOrder, type AircraftInspection,
 } from '@/hooks/useMaintenanceData';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-type Section = 'dashboard' | 'fleet' | 'inventory' | 'work_orders' | 'reports';
+type Section = 'dashboard' | 'fleet' | 'inspections' | 'inventory' | 'work_orders' | 'reports';
 
 const NAV: { id: Section; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'fleet', label: 'Fleet', icon: Plane },
+  { id: 'inspections', label: 'Inspections', icon: ClipboardCheck },
   { id: 'inventory', label: 'Inventory', icon: Boxes },
   { id: 'work_orders', label: 'Work Orders', icon: Wrench },
   { id: 'reports', label: 'Reports', icon: BarChart3 },
