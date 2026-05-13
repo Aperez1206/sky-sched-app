@@ -676,6 +676,7 @@ export default function MaintenancePage() {
           <GlobalTimer />
           {section === 'dashboard' && <DashboardSection />}
           {section === 'fleet' && <FleetSection />}
+          {section === 'inspections' && <InspectionsSection />}
           {section === 'inventory' && <InventorySection />}
           {section === 'work_orders' && <WorkOrdersSection />}
           {section === 'reports' && <ReportsSection />}
