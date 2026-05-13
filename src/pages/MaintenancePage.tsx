@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { LayoutDashboard, Plane, Boxes, Wrench, BarChart3, Play, Square, Clock, Search, AlertTriangle, Plus, CheckCircle2 } from 'lucide-react';
+import { LayoutDashboard, Plane, Boxes, Wrench, BarChart3, Play, Square, Clock, Search, AlertTriangle, Plus, CheckCircle2, ClipboardCheck, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
